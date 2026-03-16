@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Mic, Send, Trash2, Info, ChevronRight, Sparkles, Zap, Languages } from 'lucide-react';
-import { ROAST_LEVELS, RoastEvaluation, GET_SYSTEM_INSTRUCTION } from './constants';
+import { ROAST_LEVELS, RoastEvaluation, GET_SYSTEM_INSTRUCTION, GET_COACH_INSTRUCTION } from './constants';
 import { geminiService } from './services/geminiService';
 import { qwenService } from './services/qwenService';
 import { VoiceInterface } from './components/VoiceInterface';
@@ -18,7 +18,7 @@ interface Message {
 export default function App() {
   const [language, setLanguage] = useState<Language>('zh');
   const [provider, setProvider] = useState<'gemini' | 'qwen'>('qwen');
-  const [activeTab, setActiveTab] = useState<'train' | 'library'>('train');
+  const [activeTab, setActiveTab] = useState<'train' | 'library' | 'coach'>('train');
   const [level, setLevel] = useState<keyof typeof ROAST_LEVELS | 'CUSTOM' | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,6 +26,9 @@ export default function App() {
   const [isTyping, setIsTyping] = useState(false);
   const [evaluation, setEvaluation] = useState<RoastEvaluation | null>(null);
   const [showVoice, setShowVoice] = useState(false);
+  const [coachInput, setCoachInput] = useState('');
+  const [coachAdvice, setCoachAdvice] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const t = UI_TRANSLATIONS[language];
 
@@ -118,8 +121,10 @@ export default function App() {
       }
       
       setMessages(prev => [...prev, { role: 'model', text: replyText || (language === 'en' ? "Not bad, interesting!" : "不错，有点意思，再来！") }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setErrorMessage(error.message || "An error occurred");
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setIsTyping(false);
     }
@@ -143,6 +148,34 @@ export default function App() {
     }
   };
 
+  const handleGetCoachAdvice = async () => {
+    if (!coachInput.trim()) return;
+    setIsTyping(true);
+    setCoachAdvice(null);
+    setErrorMessage(null);
+    try {
+      const instruction = GET_COACH_INSTRUCTION(language);
+      let advice = "";
+      if (provider === 'gemini') {
+        const response = await geminiService.ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: coachInput,
+          config: { systemInstruction: instruction }
+        });
+        advice = response.text || "";
+      } else {
+        advice = await qwenService.sendMessage([], coachInput, instruction, true) || "";
+      }
+      setCoachAdvice(advice);
+    } catch (error: any) {
+      console.error(error);
+      setErrorMessage(error.message || "An error occurred");
+      setTimeout(() => setErrorMessage(null), 5000);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   const reset = () => {
     setLevel(null);
     setChallenge(null);
@@ -152,6 +185,20 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white">
+      <AnimatePresence>
+        {errorMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-red-600 text-white px-6 py-3 border-2 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] font-mono text-sm flex items-center gap-3"
+          >
+            <Zap size={18} />
+            {errorMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar / Level Selection */}
       <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-6 flex flex-col min-h-0">
         <div className="mb-8 flex justify-between items-start">
@@ -167,14 +214,15 @@ export default function App() {
             >
               <Languages size={20} />
             </button>
-            <button 
+            {/* 暂时屏蔽 Gemini 入口 */}
+            {/* <button 
               onClick={toggleProvider}
               className={`p-2 brutal-border transition-all flex items-center justify-center gap-2 ${provider === 'qwen' ? 'bg-neon-green text-brutal-black' : 'hover:bg-neon-green hover:text-brutal-black'}`}
               title={t.selectModel}
             >
               <Sparkles size={16} />
               <span className="font-mono text-[10px] font-bold">{provider === 'gemini' ? 'GEMINI' : 'QWEN'}</span>
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -222,6 +270,22 @@ export default function App() {
                   </button>
                 ))}
               </motion.div>
+            ) : activeTab === 'coach' ? (
+              <motion.div 
+                key="coach-nav"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="p-4 glass-panel space-y-4"
+              >
+                <div className="flex items-center gap-3 text-neon-green">
+                  <Zap size={16} />
+                  <span className="font-mono text-xs uppercase font-bold">{t.coachTab}</span>
+                </div>
+                <p className="text-xs opacity-60 leading-relaxed">
+                  {t.coachDesc}
+                </p>
+              </motion.div>
             ) : (
               <motion.div 
                 key="library-nav"
@@ -244,12 +308,24 @@ export default function App() {
 
         <div className="mt-auto pt-6 border-t border-white/10">
           <button 
+            onClick={() => setActiveTab('coach')}
+            className={`w-full py-4 font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
+              activeTab === 'coach' ? 'bg-gallery-white text-brutal-black' : 'bg-neon-green text-brutal-black'
+            }`}
+          >
+            <Zap size={24} /> {t.coachTab}
+          </button>
+        </div>
+
+        {/* 暂时屏蔽语音对线入口 */}
+        {/* <div className="mt-auto pt-6 border-t border-white/10">
+          <button 
             onClick={() => setShowVoice(true)}
             className="w-full py-4 bg-neon-green text-brutal-black font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
           >
             <Mic size={24} /> {t.voiceBattle}
           </button>
-        </div>
+        </div> */}
       </aside>
 
       {/* Main Content Area */}
@@ -264,6 +340,62 @@ export default function App() {
               className="flex-1 flex flex-col min-h-0"
             >
               <Library onSelectTopic={handleSelectTopic} language={language} />
+            </motion.div>
+          ) : activeTab === 'coach' ? (
+            <motion.div 
+              key="coach-view"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 flex flex-col p-6 md:p-12 overflow-y-auto"
+            >
+              <div className="max-w-3xl mx-auto w-full space-y-8">
+                <div className="space-y-4">
+                  <h2 className="font-display text-6xl uppercase tracking-tighter">{t.coachWelcome}</h2>
+                  <p className="font-sans text-lg opacity-70">{t.coachDesc}</p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="relative">
+                    <textarea 
+                      value={coachInput}
+                      onChange={(e) => setCoachInput(e.target.value)}
+                      placeholder={t.coachInputPlaceholder}
+                      className="w-full h-40 bg-white/5 border-2 border-white/20 p-6 font-sans focus:border-neon-green outline-none transition-colors resize-none"
+                    />
+                    <div className="absolute bottom-4 right-4 font-mono text-[10px] opacity-30 uppercase">
+                      {coachInput.length} chars
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleGetCoachAdvice}
+                    disabled={!coachInput.trim() || isTyping}
+                    className="w-full py-4 bg-neon-green text-brutal-black font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50"
+                  >
+                    {isTyping ? <Zap className="animate-spin" /> : <Sparkles />}
+                    {t.getAdvice}
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {coachAdvice && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-8 brutal-border bg-white/5 space-y-6"
+                    >
+                      <div className="flex items-center gap-3 text-neon-green">
+                        <MessageSquare size={20} />
+                        <span className="font-mono text-xs uppercase font-bold tracking-widest">{t.coachAdvice}</span>
+                      </div>
+                      <div className="prose prose-invert prose-lg max-w-none">
+                        <Markdown>{coachAdvice}</Markdown>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </motion.div>
           ) : !level ? (
             <motion.div 

@@ -35,6 +35,12 @@ export const UI_TRANSLATIONS = {
     selectModel: "选择模型",
     modelGemini: "Gemini (默认)",
     modelQwen: "Qwen-3.5 (通义千问)",
+    coachTab: "毒舌教练",
+    coachWelcome: "遇到对手了？",
+    coachDesc: "描述你遇到的尴尬场景或言语攻击，教练教你如何优雅（或犀利）地回击。",
+    coachInputPlaceholder: "描述一下你遇到的情况，例如：‘同事阴阳怪气说我衣服难看’...",
+    getAdvice: "获取回击建议",
+    coachAdvice: "教练建议",
   },
   en: {
     title: "Roast Bootcamp",
@@ -72,6 +78,12 @@ export const UI_TRANSLATIONS = {
     selectModel: "Model",
     modelGemini: "Gemini (Default)",
     modelQwen: "Qwen-3.5",
+    coachTab: "Coach",
+    coachWelcome: "Met your match?",
+    coachDesc: "Describe the awkward scenario or verbal attack you encountered, and the coach will teach you how to counter elegantly (or sharply).",
+    coachInputPlaceholder: "Describe your situation, e.g., 'A colleague sarcastically said my clothes are ugly'...",
+    getAdvice: "Get Advice",
+    coachAdvice: "Coach's Advice",
   }
 };
 

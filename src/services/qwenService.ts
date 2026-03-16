@@ -8,11 +8,15 @@ export interface Message {
 export class QwenService {
   private apiKey: string;
   private apiBase: string;
+  private coachApiKey: string;
+  private coachApiBase: string;
 
   constructor() {
     // Use process.env as defined in vite.config.ts
     this.apiKey = process.env.VITE_QWEN_API_KEY || '';
-    this.apiBase = process.env.VITE_QWEN_API_BASE || 'https://dashscope.aliyuncs.com/api/v1/apps/a4075b0461ed48c39ab1ce359639e4a6/completion';
+    this.apiBase = process.env.VITE_QWEN_API_BASE || '';
+    this.coachApiKey = process.env.VITE_QWEN_COACH_API_KEY || this.apiKey;
+    this.coachApiBase = process.env.VITE_QWEN_COACH_API_BASE || this.apiBase;
   }
 
   async generateChallenge(levelPrompt: string, lang: 'zh' | 'en') {
@@ -74,7 +78,7 @@ export class QwenService {
     }
   }
 
-  async sendMessage(chatHistory: { role: string; text: string }[], message: string, systemInstruction: string) {
+  async sendMessage(chatHistory: { role: string; text: string }[], message: string, systemInstruction: string, isCoach: boolean = false) {
     const messages: Message[] = [
       ...chatHistory.map(m => ({
         role: (m.role === 'model' || m.role === 'assistant') ? 'assistant' as const : 'user' as const,
@@ -82,18 +86,21 @@ export class QwenService {
       })),
       { role: 'user' as const, content: message }
     ];
-    return this.callApi(systemInstruction, messages);
+    return this.callApi(systemInstruction, messages, false, isCoach);
   }
 
-  private async callApi(systemInstruction: string, messages: Message[], isJson: boolean = false) {
-    if (!this.apiKey) {
-      throw new Error("QWEN_API_KEY is not set. Please configure it in your environment.");
+  private async callApi(systemInstruction: string, messages: Message[], isJson: boolean = false, isCoach: boolean = false) {
+    const currentApiKey = isCoach ? this.coachApiKey : this.apiKey;
+    const currentApiBase = isCoach ? this.coachApiBase : this.apiBase;
+
+    if (!currentApiKey) {
+      throw new Error(`${isCoach ? 'QWEN_COACH_API_KEY' : 'QWEN_API_KEY'} is not set. Please configure it in your environment.`);
     }
 
-    const isAppApi = this.apiBase.includes('/api/v1/apps/');
+    const isAppApi = currentApiBase.includes('/api/v1/apps/');
     
     // If it's the Model API (OpenAI compatible), we might need to append /chat/completions
-    let url = this.apiBase;
+    let url = currentApiBase;
     if (!isAppApi && !url.endsWith('/chat/completions')) {
       url = url.endsWith('/') ? `${url}chat/completions` : `${url}/chat/completions`;
     }
@@ -117,29 +124,52 @@ export class QwenService {
       response_format: isJson ? { type: "json_object" } : undefined
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify(body)
-    });
+    console.log(`Calling Qwen API: ${url}`, { isAppApi, body });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Qwen API Error: ${error.error?.message || error.message || response.statusText}`);
-    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 30 second timeout
 
-    const data = await response.json();
-    
-    if (isAppApi) {
-      // DashScope App API response structure
-      return data.output?.choices?.[0]?.message?.content || data.output?.text || "";
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentApiKey}`
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        console.error("Qwen API Error Response:", errorData);
+        throw new Error(`Qwen API Error (${response.status}): ${errorData.error?.message || errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Qwen API Success Response:", data);
+      
+      if (isAppApi) {
+        // DashScope App API response structure
+        const content = data.output?.choices?.[0]?.message?.content || data.output?.text || "";
+        if (!content && data.output?.text === undefined) {
+          console.warn("Qwen App API returned empty content. Full data:", data);
+        }
+        return content;
+      }
+      
+      // DashScope Model API (OpenAI compatible) response structure
+      return data.choices?.[0]?.message?.content || "";
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError') {
+        throw new Error("Qwen API request timed out after 30 seconds.");
+      }
+      console.error("Qwen API Fetch Exception:", e);
+      throw e;
     }
-    
-    // DashScope Model API (OpenAI compatible) response structure
-    return data.choices[0].message.content;
   }
 }
 
