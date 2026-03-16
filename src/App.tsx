@@ -5,6 +5,7 @@ import { ROAST_LEVELS, RoastEvaluation } from './constants';
 import { geminiService } from './services/geminiService';
 import { VoiceInterface } from './components/VoiceInterface';
 import { ScoreBoard } from './components/ScoreBoard';
+import { Library } from './components/Library';
 import Markdown from 'react-markdown';
 
 interface Message {
@@ -13,8 +14,8 @@ interface Message {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'voice'>('chat');
-  const [level, setLevel] = useState<keyof typeof ROAST_LEVELS | null>(null);
+  const [activeTab, setActiveTab] = useState<'train' | 'library'>('train');
+  const [level, setLevel] = useState<keyof typeof ROAST_LEVELS | 'CUSTOM' | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -28,11 +29,12 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const startChallenge = async (selectedLevel: keyof typeof ROAST_LEVELS) => {
+  const startChallenge = async (selectedLevel: keyof typeof ROAST_LEVELS | 'CUSTOM', customPrompt?: string) => {
     setLevel(selectedLevel);
     setIsTyping(true);
     try {
-      const challengeText = await geminiService.generateChallenge(ROAST_LEVELS[selectedLevel].prompt);
+      const prompt = selectedLevel === 'CUSTOM' ? `针对以下主题发起一个怼人挑战：${customPrompt}` : ROAST_LEVELS[selectedLevel].prompt;
+      const challengeText = await geminiService.generateChallenge(prompt);
       setChallenge(challengeText);
       setMessages([{ role: 'model', text: challengeText }]);
     } catch (error) {
@@ -40,6 +42,11 @@ export default function App() {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSelectTopic = (topic: { title: string; context: string }) => {
+    setActiveTab('train');
+    startChallenge('CUSTOM', `主题：${topic.title}。背景：${topic.context}`);
   };
 
   const handleSend = async () => {
@@ -100,24 +107,67 @@ export default function App() {
         </div>
 
         <div className="flex-1 space-y-4">
-          <h2 className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
-            <Sparkles size={14} className="text-neon-green" /> 选择段位
-          </h2>
-          {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
-            <button
-              key={key}
-              onClick={() => startChallenge(key)}
-              disabled={!!level}
-              className={`w-full text-left p-4 brutal-border transition-all group ${
-                level === key 
-                  ? 'bg-neon-green text-brutal-black' 
-                  : 'hover:bg-gallery-white hover:text-brutal-black'
-              } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
+          <div className="flex gap-2 mb-6">
+            <button 
+              onClick={() => { setActiveTab('train'); reset(); }}
+              className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'train' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
-              <div className="font-display text-xl uppercase">{ROAST_LEVELS[key].name}</div>
-              <div className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key].description}</div>
+              实战训练
             </button>
-          ))}
+            <button 
+              onClick={() => setActiveTab('library')}
+              className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'library' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
+            >
+              知识库
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeTab === 'train' ? (
+              <motion.div 
+                key="train-nav"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="space-y-4"
+              >
+                <h2 className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
+                  <Sparkles size={14} className="text-neon-green" /> 选择段位
+                </h2>
+                {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
+                  <button
+                    key={String(key)}
+                    onClick={() => startChallenge(key)}
+                    disabled={!!level}
+                    className={`w-full text-left p-4 brutal-border transition-all group ${
+                      level === key 
+                        ? 'bg-neon-green text-brutal-black' 
+                        : 'hover:bg-gallery-white hover:text-brutal-black'
+                    } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
+                  >
+                    <div className="font-display text-xl uppercase">{ROAST_LEVELS[key].name}</div>
+                    <div className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key].description}</div>
+                  </button>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="library-nav"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="p-4 glass-panel space-y-4"
+              >
+                <div className="flex items-center gap-3 text-neon-green">
+                  <Info size={16} />
+                  <span className="font-mono text-xs uppercase font-bold">理论指导</span>
+                </div>
+                <p className="text-xs opacity-60 leading-relaxed">
+                  在这里学习如何优雅地反击、控制情绪，并浏览我们为您准备的辩论题库。
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="mt-auto pt-6 border-t border-white/10">
@@ -131,9 +181,19 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col relative overflow-hidden min-h-0">
         <AnimatePresence mode="wait">
-          {!level ? (
+          {activeTab === 'library' ? (
+            <motion.div 
+              key="library-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <Library onSelectTopic={handleSelectTopic} />
+            </motion.div>
+          ) : !level ? (
             <motion.div 
               key="welcome"
               initial={{ opacity: 0, y: 20 }}
@@ -176,10 +236,12 @@ export default function App() {
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-neon-green rounded-full flex items-center justify-center text-brutal-black font-bold">
-                    {level[0]}
+                    {level === 'CUSTOM' ? 'C' : level[0]}
                   </div>
                   <div>
-                    <div className="font-bold text-sm uppercase">{ROAST_LEVELS[level].name}</div>
+                    <div className="font-bold text-sm uppercase">
+                      {level === 'CUSTOM' ? '自定义话题挑战' : ROAST_LEVELS[level].name}
+                    </div>
                     <div className="text-[10px] font-mono text-neon-green">ACTIVE SESSION</div>
                   </div>
                 </div>
