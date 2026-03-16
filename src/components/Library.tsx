@@ -49,12 +49,12 @@ export const Library: React.FC<LibraryProps> = ({ onSelectTopic, language }) => 
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               {DEFENSE_TECHNIQUES.map((tech: any, i) => (
-                <div key={i} className="p-6 brutal-border bg-white/5 hover:bg-white/10 transition-colors">
-                  <h3 className="font-display text-2xl uppercase text-neon-green mb-2">{tech[language].title}</h3>
-                  <p className="font-sans text-sm opacity-70 mb-4">{tech[language].description}</p>
+                <div key={i} className="p-4 md:p-6 brutal-border bg-white/5 hover:bg-white/10 transition-colors">
+                  <h3 className="font-display text-xl md:text-2xl uppercase text-neon-green mb-2">{tech[language].title}</h3>
+                  <p className="font-sans text-xs md:text-sm opacity-70 mb-4">{tech[language].description}</p>
                   <div className="bg-white/10 p-3 border-l-4 border-white/30">
                     <span className="font-mono text-[10px] uppercase opacity-50 block mb-1">{t.scenario}</span>
-                    <p className="text-sm italic">“{tech[language].scenario}”</p>
+                    <p className="text-xs md:text-sm italic">“{tech[language].scenario}”</p>
                   </div>
                 </div>
               ))}
@@ -70,13 +70,13 @@ export const Library: React.FC<LibraryProps> = ({ onSelectTopic, language }) => 
               className="space-y-6 max-w-3xl mx-auto"
             >
               {EMOTION_TIPS.map((tip: any, i) => (
-                <div key={i} className="p-8 brutal-border bg-white/5 flex gap-6 items-start">
-                  <div className="bg-neon-green text-brutal-black font-display text-4xl p-4 leading-none">
+                <div key={i} className="p-4 md:p-8 brutal-border bg-white/5 flex gap-4 md:gap-6 items-start">
+                  <div className="bg-neon-green text-brutal-black font-display text-2xl md:text-4xl p-3 md:p-4 leading-none">
                     0{i + 1}
                   </div>
                   <div>
-                    <h3 className="font-display text-3xl uppercase mb-2">{tip[language].title}</h3>
-                    <p className="font-sans text-lg opacity-80 leading-relaxed">{tip[language].tip}</p>
+                    <h3 className="font-display text-xl md:text-3xl uppercase mb-2">{tip[language].title}</h3>
+                    <p className="font-sans text-base md:text-lg opacity-80 leading-relaxed">{tip[language].tip}</p>
                   </div>
                 </div>
               ))}
@@ -115,7 +115,7 @@ export const Library: React.FC<LibraryProps> = ({ onSelectTopic, language }) => 
 const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) => (
   <button 
     onClick={onClick}
-    className={`flex-1 py-4 flex items-center justify-center gap-2 font-display text-lg uppercase transition-all ${
+    className={`flex-1 py-3 md:py-4 flex items-center justify-center gap-2 font-display text-base md:text-lg uppercase transition-all ${
       active ? 'bg-gallery-white text-brutal-black' : 'hover:bg-white/10'
     }`}
   >

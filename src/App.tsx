@@ -184,7 +184,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white">
+    <div className="min-h-[100dvh] md:h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white overflow-x-hidden">
       <AnimatePresence>
         {errorMessage && (
           <motion.div 
@@ -200,10 +200,10 @@ export default function App() {
       </AnimatePresence>
 
       {/* Sidebar / Level Selection */}
-      <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-6 flex flex-col min-h-0">
-        <div className="mb-8 flex justify-between items-start">
+      <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-4 md:p-6 flex flex-col shrink-0 sticky md:relative top-0 z-50 bg-brutal-black">
+        <div className="mb-6 md:mb-8 flex justify-between items-start">
           <div>
-            <h1 className="font-display text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</h1>
+            <h1 className="font-display text-3xl md:text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</h1>
             <p className="font-mono text-[10px] uppercase tracking-widest opacity-50">{t.subtitle}</p>
           </div>
           <div className="flex flex-col gap-2">
@@ -306,14 +306,14 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        <div className="mt-auto pt-6 border-t border-white/10">
+        <div className={`mt-auto pt-4 md:pt-6 border-t border-white/10 ${activeTab === 'library' ? 'hidden md:block' : ''}`}>
           <button 
             onClick={() => setActiveTab('coach')}
-            className={`w-full py-4 font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
+            className={`w-full py-3 md:py-4 font-display text-xl md:text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
               activeTab === 'coach' ? 'bg-gallery-white text-brutal-black' : 'bg-neon-green text-brutal-black'
             }`}
           >
-            <Zap size={24} /> {t.coachTab}
+            <Zap size={20} /> {t.coachTab}
           </button>
         </div>
 
@@ -349,10 +349,10 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="flex-1 flex flex-col p-6 md:p-12 overflow-y-auto"
             >
-              <div className="max-w-3xl mx-auto w-full space-y-8">
+              <div className="max-w-3xl mx-auto w-full space-y-6 md:space-y-8">
                 <div className="space-y-4">
-                  <h2 className="font-display text-6xl uppercase tracking-tighter">{t.coachWelcome}</h2>
-                  <p className="font-sans text-lg opacity-70">{t.coachDesc}</p>
+                  <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.coachWelcome}</h2>
+                  <p className="font-sans text-base md:text-lg opacity-70">{t.coachDesc}</p>
                 </div>
 
                 <div className="space-y-6">
@@ -371,7 +371,7 @@ export default function App() {
                   <button 
                     onClick={handleGetCoachAdvice}
                     disabled={!coachInput.trim() || isTyping}
-                    className="w-full py-4 bg-neon-green text-brutal-black font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50"
+                    className="w-full py-3 md:py-4 bg-neon-green text-brutal-black font-display text-xl md:text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50"
                   >
                     {isTyping ? <Zap className="animate-spin" /> : <Sparkles />}
                     {t.getAdvice}
@@ -406,26 +406,27 @@ export default function App() {
               className="flex-1 flex flex-col items-center justify-center p-12 text-center"
             >
               <div className="max-w-md space-y-6">
-                <div className="w-24 h-24 bg-neon-green rounded-full mx-auto flex items-center justify-center text-brutal-black">
-                  <Zap size={48} />
+                <div className="w-16 h-16 md:w-24 md:h-24 bg-neon-green rounded-full mx-auto flex items-center justify-center text-brutal-black">
+                  <Zap size={32} className="md:hidden" />
+                  <Zap size={48} className="hidden md:block" />
                 </div>
-                <h2 className="font-display text-6xl uppercase tracking-tighter">{t.readyToRoast}</h2>
-                <p className="font-sans text-lg opacity-70">{t.welcomeDesc}</p>
+                <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.readyToRoast}</h2>
+                <p className="font-sans text-base md:text-lg opacity-70">{t.welcomeDesc}</p>
                 <div className="pt-8 flex flex-col gap-4">
-                  <div className="flex items-center gap-4 text-left p-4 glass-panel">
+                  {/* <div className="flex items-center gap-4 text-left p-4 glass-panel">
                     <div className="bg-white/10 p-2 rounded"><MessageSquare size={20} /></div>
                     <div>
                       <div className="font-bold text-sm">{t.textTraining}</div>
                       <div className="text-xs opacity-50">{t.textTrainingDesc}</div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-left p-4 glass-panel">
+                  </div> */}
+                  {/* <div className="flex items-center gap-4 text-left p-4 glass-panel">
                     <div className="bg-white/10 p-2 rounded"><Mic size={20} /></div>
                     <div>
                       <div className="font-bold text-sm">{t.voiceTraining}</div>
                       <div className="text-xs opacity-50">{t.voiceTrainingDesc}</div>
                     </div>
-                  </div>
+                  </div> */} 
                 </div>
               </div>
             </motion.div>

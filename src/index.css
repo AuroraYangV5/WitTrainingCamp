@@ -13,7 +13,7 @@
 
 @layer base {
   body {
-    @apply bg-brutal-black text-gallery-white font-sans overflow-hidden;
+    @apply bg-brutal-black text-gallery-white font-sans overflow-y-auto md:overflow-hidden;
   }
 }
 
