@@ -9,6 +9,7 @@ import { ScoreBoard } from './components/ScoreBoard';
 import { Library } from './components/Library';
 import { UI_TRANSLATIONS, Language } from './translations';
 import Markdown from 'react-markdown';
+import { View, Text, ScrollView, Button, Textarea } from './components/TaroCompat';
 
 interface Message {
   role: 'user' | 'model';
@@ -184,7 +185,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-[100dvh] md:h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white overflow-x-hidden">
+    <View className="min-h-[100dvh] md:h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white overflow-x-hidden">
       <AnimatePresence>
         {errorMessage && (
           <motion.div 
@@ -194,53 +195,44 @@ export default function App() {
             className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-red-600 text-white px-6 py-3 border-2 border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] font-mono text-sm flex items-center gap-3"
           >
             <Zap size={18} />
-            {errorMessage}
+            <Text>{errorMessage}</Text>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Sidebar / Level Selection */}
-      <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-4 md:p-6 flex flex-col shrink-0 sticky md:relative top-0 z-50 bg-brutal-black">
-        <div className="mb-6 md:mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="font-display text-3xl md:text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</h1>
-            <p className="font-mono text-[10px] uppercase tracking-widest opacity-50">{t.subtitle}</p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <button 
+      <View className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-4 md:p-6 flex flex-col shrink-0 sticky md:relative top-0 z-50 bg-brutal-black">
+        <View className="mb-6 md:mb-8 flex justify-between items-start">
+          <View>
+            <View className="font-display text-3xl md:text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</View>
+            <Text className="font-mono text-[10px] uppercase tracking-widest opacity-50">{t.subtitle}</Text>
+          </View>
+          <View className="flex flex-col gap-2">
+            <Button 
               onClick={toggleLanguage}
               className="p-2 brutal-border hover:bg-neon-green hover:text-brutal-black transition-all"
               title="Switch Language"
             >
               <Languages size={20} />
-            </button>
-            {/* 暂时屏蔽 Gemini 入口 */}
-            {/* <button 
-              onClick={toggleProvider}
-              className={`p-2 brutal-border transition-all flex items-center justify-center gap-2 ${provider === 'qwen' ? 'bg-neon-green text-brutal-black' : 'hover:bg-neon-green hover:text-brutal-black'}`}
-              title={t.selectModel}
-            >
-              <Sparkles size={16} />
-              <span className="font-mono text-[10px] font-bold">{provider === 'gemini' ? 'GEMINI' : 'QWEN'}</span>
-            </button> */}
-          </div>
-        </div>
+            </Button>
+          </View>
+        </View>
 
-        <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-          <div className="flex gap-2 mb-6">
-            <button 
+        <ScrollView className="flex-1 space-y-4 overflow-y-auto pr-2" scrollY>
+          <View className="flex gap-2 mb-6">
+            <Button 
               onClick={() => { setActiveTab('train'); reset(); }}
               className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'train' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
               {t.trainTab}
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={() => setActiveTab('library')}
               className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'library' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
               {t.libraryTab}
-            </button>
-          </div>
+            </Button>
+          </View>
 
           <AnimatePresence mode="wait">
             {activeTab === 'train' ? (
@@ -251,11 +243,11 @@ export default function App() {
                 exit={{ opacity: 0, x: -10 }}
                 className="space-y-4"
               >
-                <h2 className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
+                <View className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
                   <Sparkles size={14} className="text-neon-green" /> {t.selectLevel}
-                </h2>
+                </View>
                 {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
-                  <button
+                  <Button
                     key={String(key)}
                     onClick={() => startChallenge(key)}
                     disabled={!!level}
@@ -265,9 +257,9 @@ export default function App() {
                         : 'hover:bg-gallery-white hover:text-brutal-black'
                     } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
                   >
-                    <div className="font-display text-xl uppercase">{ROAST_LEVELS[key][language].name}</div>
-                    <div className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key][language].description}</div>
-                  </button>
+                    <View className="font-display text-xl uppercase">{ROAST_LEVELS[key][language].name}</View>
+                    <View className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key][language].description}</View>
+                  </Button>
                 ))}
               </motion.div>
             ) : activeTab === 'coach' ? (
@@ -278,13 +270,13 @@ export default function App() {
                 exit={{ opacity: 0, x: -10 }}
                 className="p-4 glass-panel space-y-4"
               >
-                <div className="flex items-center gap-3 text-neon-green">
+                <View className="flex items-center gap-3 text-neon-green">
                   <Zap size={16} />
-                  <span className="font-mono text-xs uppercase font-bold">{t.coachTab}</span>
-                </div>
-                <p className="text-xs opacity-60 leading-relaxed">
+                  <Text className="font-mono text-xs uppercase font-bold">{t.coachTab}</Text>
+                </View>
+                <Text className="text-xs opacity-60 leading-relaxed">
                   {t.coachDesc}
-                </p>
+                </Text>
               </motion.div>
             ) : (
               <motion.div 
@@ -294,42 +286,32 @@ export default function App() {
                 exit={{ opacity: 0, x: -10 }}
                 className="p-4 glass-panel space-y-4"
               >
-                <div className="flex items-center gap-3 text-neon-green">
+                <View className="flex items-center gap-3 text-neon-green">
                   <Info size={16} />
-                  <span className="font-mono text-xs uppercase font-bold">{t.theoryGuide}</span>
-                </div>
-                <p className="text-xs opacity-60 leading-relaxed">
+                  <Text className="font-mono text-xs uppercase font-bold">{t.theoryGuide}</Text>
+                </View>
+                <Text className="text-xs opacity-60 leading-relaxed">
                   {t.theoryGuideDesc}
-                </p>
+                </Text>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </ScrollView>
 
-        <div className={`mt-auto pt-4 md:pt-6 border-t border-white/10 ${activeTab === 'library' ? 'hidden md:block' : ''}`}>
-          <button 
+        <View className={`mt-auto pt-4 md:pt-6 border-t border-white/10 ${activeTab === 'library' ? 'hidden md:block' : ''}`}>
+          <Button 
             onClick={() => setActiveTab('coach')}
             className={`w-full py-3 md:py-4 font-display text-xl md:text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
               activeTab === 'coach' ? 'bg-gallery-white text-brutal-black' : 'bg-neon-green text-brutal-black'
             }`}
           >
             <Zap size={20} /> {t.coachTab}
-          </button>
-        </div>
-
-        {/* 暂时屏蔽语音对线入口 */}
-        {/* <div className="mt-auto pt-6 border-t border-white/10">
-          <button 
-            onClick={() => setShowVoice(true)}
-            className="w-full py-4 bg-neon-green text-brutal-black font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-          >
-            <Mic size={24} /> {t.voiceBattle}
-          </button>
-        </div> */}
-      </aside>
+          </Button>
+        </View>
+      </View>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden min-h-0">
+      <View className="flex-1 flex flex-col relative overflow-hidden min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === 'library' ? (
             <motion.div 
@@ -349,34 +331,34 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="flex-1 flex flex-col p-6 md:p-12 overflow-y-auto"
             >
-              <div className="max-w-3xl mx-auto w-full space-y-6 md:space-y-8">
-                <div className="space-y-4">
-                  <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.coachWelcome}</h2>
-                  <p className="font-sans text-base md:text-lg opacity-70">{t.coachDesc}</p>
-                </div>
+              <View className="max-w-3xl mx-auto w-full space-y-6 md:space-y-8">
+                <View className="space-y-4">
+                  <View className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.coachWelcome}</View>
+                  <Text className="font-sans text-base md:text-lg opacity-70">{t.coachDesc}</Text>
+                </View>
 
-                <div className="space-y-6">
-                  <div className="relative">
-                    <textarea 
+                <View className="space-y-6">
+                  <View className="relative">
+                    <Textarea 
                       value={coachInput}
-                      onChange={(e) => setCoachInput(e.target.value)}
+                      onInput={(e: any) => setCoachInput(e.target.value)}
                       placeholder={t.coachInputPlaceholder}
                       className="w-full h-40 bg-white/5 border-2 border-white/20 p-6 font-sans focus:border-neon-green outline-none transition-colors resize-none"
                     />
-                    <div className="absolute bottom-4 right-4 font-mono text-[10px] opacity-30 uppercase">
+                    <View className="absolute bottom-4 right-4 font-mono text-[10px] opacity-30 uppercase">
                       {coachInput.length} chars
-                    </div>
-                  </div>
+                    </View>
+                  </View>
 
-                  <button 
+                  <Button 
                     onClick={handleGetCoachAdvice}
                     disabled={!coachInput.trim() || isTyping}
                     className="w-full py-3 md:py-4 bg-neon-green text-brutal-black font-display text-xl md:text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50"
                   >
                     {isTyping ? <Zap className="animate-spin" /> : <Sparkles />}
                     {t.getAdvice}
-                  </button>
-                </div>
+                  </Button>
+                </View>
 
                 <AnimatePresence>
                   {coachAdvice && (
@@ -385,17 +367,17 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="p-8 brutal-border bg-white/5 space-y-6"
                     >
-                      <div className="flex items-center gap-3 text-neon-green">
+                      <View className="flex items-center gap-3 text-neon-green">
                         <MessageSquare size={20} />
-                        <span className="font-mono text-xs uppercase font-bold tracking-widest">{t.coachAdvice}</span>
-                      </div>
-                      <div className="prose prose-invert prose-lg max-w-none">
+                        <Text className="font-mono text-xs uppercase font-bold tracking-widest">{t.coachAdvice}</Text>
+                      </View>
+                      <View className="prose prose-invert prose-lg max-w-none">
                         <Markdown>{coachAdvice}</Markdown>
-                      </div>
+                      </View>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </View>
             </motion.div>
           ) : !level ? (
             <motion.div 
@@ -405,30 +387,16 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="flex-1 flex flex-col items-center justify-center p-12 text-center"
             >
-              <div className="max-w-md space-y-6">
-                <div className="w-16 h-16 md:w-24 md:h-24 bg-neon-green rounded-full mx-auto flex items-center justify-center text-brutal-black">
+              <View className="max-w-md space-y-6">
+                <View className="w-16 h-16 md:w-24 md:h-24 bg-neon-green rounded-full mx-auto flex items-center justify-center text-brutal-black">
                   <Zap size={32} className="md:hidden" />
                   <Zap size={48} className="hidden md:block" />
-                </div>
-                <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.readyToRoast}</h2>
-                <p className="font-sans text-base md:text-lg opacity-70">{t.welcomeDesc}</p>
-                <div className="pt-8 flex flex-col gap-4">
-                  {/* <div className="flex items-center gap-4 text-left p-4 glass-panel">
-                    <div className="bg-white/10 p-2 rounded"><MessageSquare size={20} /></div>
-                    <div>
-                      <div className="font-bold text-sm">{t.textTraining}</div>
-                      <div className="text-xs opacity-50">{t.textTrainingDesc}</div>
-                    </div>
-                  </div> */}
-                  {/* <div className="flex items-center gap-4 text-left p-4 glass-panel">
-                    <div className="bg-white/10 p-2 rounded"><Mic size={20} /></div>
-                    <div>
-                      <div className="font-bold text-sm">{t.voiceTraining}</div>
-                      <div className="text-xs opacity-50">{t.voiceTrainingDesc}</div>
-                    </div>
-                  </div> */} 
-                </div>
-              </div>
+                </View>
+                <View className="font-display text-4xl md:text-6xl uppercase tracking-tighter">{t.readyToRoast}</View>
+                <Text className="font-sans text-base md:text-lg opacity-70">{t.welcomeDesc}</Text>
+                <View className="pt-8 flex flex-col gap-4">
+                </View>
+              </View>
             </motion.div>
           ) : (
             <motion.div 
@@ -438,25 +406,25 @@ export default function App() {
               className="flex-1 flex flex-col h-full"
             >
               {/* Chat Header */}
-              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-neon-green rounded-full flex items-center justify-center text-brutal-black font-bold">
+              <View className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <View className="flex items-center gap-3">
+                  <View className="w-8 h-8 bg-neon-green rounded-full flex items-center justify-center text-brutal-black font-bold">
                     {level === 'CUSTOM' ? 'C' : level[0]}
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm uppercase">
+                  </View>
+                  <View>
+                    <View className="font-bold text-sm uppercase">
                       {level === 'CUSTOM' ? t.customTopic : ROAST_LEVELS[level][language].name}
-                    </div>
-                    <div className="text-[10px] font-mono text-neon-green">{t.activeSession}</div>
-                  </div>
-                </div>
-                <button onClick={reset} className="p-2 hover:bg-red-500/20 text-red-500 transition-colors">
+                    </View>
+                    <View className="text-[10px] font-mono text-neon-green">{t.activeSession}</View>
+                  </View>
+                </View>
+                <Button onClick={reset} className="p-2 hover:bg-red-500/20 text-red-500 transition-colors">
                   <Trash2 size={20} />
-                </button>
-              </div>
+                </Button>
+              </View>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <ScrollView className="flex-1 overflow-y-auto p-6 space-y-6" scrollY>
                 {messages.map((msg, i) => (
                   <motion.div
                     key={i}
@@ -464,38 +432,38 @@ export default function App() {
                     animate={{ opacity: 1, x: 0 }}
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[80%] p-4 ${
+                    <View className={`max-w-[80%] p-4 ${
                       msg.role === 'user' 
                         ? 'bg-gallery-white text-brutal-black brutal-shadow' 
                         : 'bg-white/10 border border-white/20'
                     }`}>
-                      <div className="font-mono text-[10px] uppercase opacity-50 mb-1">
+                      <View className="font-mono text-[10px] uppercase opacity-50 mb-1">
                         {msg.role === 'user' ? t.you : t.roastMaster}
-                      </div>
-                      <div className="prose prose-invert prose-sm max-w-none">
+                      </View>
+                      <View className="prose prose-invert prose-sm max-w-none">
                         <Markdown>{msg.text}</Markdown>
-                      </div>
-                    </div>
+                      </View>
+                    </View>
                   </motion.div>
                 ))}
                 {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white/10 p-4 border border-white/20 animate-pulse">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-white rounded-full" />
-                        <div className="w-2 h-2 bg-white rounded-full" />
-                        <div className="w-2 h-2 bg-white rounded-full" />
-                      </div>
-                      <span className="text-[10px] font-mono ml-2 opacity-50">{t.typing}</span>
-                    </div>
-                  </div>
+                  <View className="flex justify-start">
+                    <View className="bg-white/10 p-4 border border-white/20 animate-pulse">
+                      <View className="flex gap-1">
+                        <View className="w-2 h-2 bg-white rounded-full" />
+                        <View className="w-2 h-2 bg-white rounded-full" />
+                        <View className="w-2 h-2 bg-white rounded-full" />
+                      </View>
+                      <Text className="text-[10px] font-mono ml-2 opacity-50">{t.typing}</Text>
+                    </View>
+                  </View>
                 )}
-                <div ref={chatEndRef} />
-              </div>
+                <View ref={chatEndRef} />
+              </ScrollView>
 
               {/* Input Area */}
-              <div className="p-6 border-t border-white/10 space-y-4">
-                <div className="flex gap-4">
+              <View className="p-6 border-t border-white/10 space-y-4">
+                <View className="flex gap-4">
                   <input
                     type="text"
                     value={input}
@@ -504,14 +472,14 @@ export default function App() {
                     placeholder={t.inputPlaceholder}
                     className="flex-1 bg-white/5 border-2 border-white/20 p-4 font-sans focus:border-neon-green outline-none transition-colors"
                   />
-                  <button 
+                  <Button 
                     onClick={handleSend}
                     disabled={!input.trim() || isTyping}
                     className="bg-gallery-white text-brutal-black px-8 font-display text-xl uppercase hover:bg-neon-green transition-colors disabled:opacity-50"
                   >
                     <Send size={24} />
-                  </button>
-                </div>
+                  </Button>
+                </View>
                 
                 {messages.length >= 3 && (
                   <motion.button
@@ -524,7 +492,7 @@ export default function App() {
                     {t.endAndEvaluate}
                   </motion.button>
                 )}
-              </div>
+              </View>
             </motion.div>
           )}
         </AnimatePresence>
@@ -532,12 +500,12 @@ export default function App() {
         {/* Evaluation Overlay */}
         <AnimatePresence>
           {evaluation && (
-            <div className="absolute inset-0 z-40 bg-brutal-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+            <View className="absolute inset-0 z-40 bg-brutal-black/80 backdrop-blur-sm flex items-center justify-center p-6">
               <ScoreBoard evaluation={evaluation} onReset={() => setEvaluation(null)} language={language} />
-            </div>
+            </View>
           )}
         </AnimatePresence>
-      </main>
+      </View>
 
       {/* Voice Interface Overlay */}
       <AnimatePresence>
@@ -551,9 +519,9 @@ export default function App() {
       </AnimatePresence>
 
       {/* Background Decoration */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-5">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px]" />
-      </div>
-    </div>
+      <View className="fixed inset-0 pointer-events-none z-[-1] opacity-5">
+        <View className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px]" />
+      </View>
+    </View>
   );
 }

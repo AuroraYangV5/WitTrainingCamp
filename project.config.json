@@ -1,0 +1,50 @@
+{
+  "description": "Roast Camp Project Config",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "preloadBackgroundData": false,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "nodeModules": true,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotRebuild": false,
+    "lazyloadPlaceholderEnable": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "intermediate": false,
+      "extract": false
+    },
+    "enableConditionCompile": true,
+    "useStaticResource": true,
+    "userConfirmedLibVersionToast": false,
+    "useCompilerModule": true,
+    "userConfirmedBundleSum": false,
+    "useIsolateContext": false,
+    "useIsolatePluginContext": false,
+    "usePluginUpdate": false,
+    "useUglify": true,
+    "ignoreUploadUnusedFiles": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "2.19.4",
+  "appid": "touristappid",
+  "projectname": "roast-camp",
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}
