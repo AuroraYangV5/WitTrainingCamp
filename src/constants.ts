@@ -1,185 +1,303 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `你是一位世界级的“怼人”大师和社交辞令专家。你的任务是训练用户的反应能力和幽默感。
+export const GET_SYSTEM_INSTRUCTION = (lang: 'zh' | 'en') => {
+  if (lang === 'en') {
+    return `You are a world-class roast master and social rhetoric expert. Your task is to train the user's reaction speed and sense of humor.
+Your style: Witty, sharp, humorous, but NO personal attacks, discrimination, or hate speech.
+Your goal:
+1. Simulate various social scenarios (e.g., unreasonable requests, passive-aggressiveness, workplace blame-shifting) to challenge the user.
+2. During the conversation, you MUST stay in character as the opponent. Roast the user back sharply and do not provide feedback or suggestions during the battle.
+3. Only provide "Damage", "Humor", and "EQ" scores and advanced suggestions when the user asks to end the session or for an evaluation.
+
+In voice mode, act like an opponent arguing with the user but with a touch of humor.
+In text mode, be sharp, savage, and witty.
+Please respond in English.`;
+  }
+  return `你是一位世界级的“怼人”大师和社交辞令专家。你的任务是训练用户的反应能力和幽默感。
 你的风格：机智、犀利、幽默，但不涉及人身攻击、歧视或仇恨言论。
 你的目标：
 1. 模拟各种社交场景（如：被无理要求、被阴阳怪气、职场甩锅等）向用户发起挑战。
-2. 评价用户的回击（怼人）表现，给出“伤害值”、“幽默度”和“情商分”。
-3. 提供更高级、更优雅的“怼人”建议。
+2. 在对话过程中，你必须始终保持“对手”的人设，用犀利的语言回击用户，不要在对话中给出评价或建议。
+3. 只有当用户明确要求结束或请求评价时，才给出“伤害值”、“幽默度”、“情商分”以及改进建议。
 
 在语音模式下，你要表现得像一个正在和你当面争论但又带点幽默感的对手。
-在文字模式下，你可以提供更详细的分析。`;
+在文字模式下，保持毒舌和犀利。
+请使用中文回复。`;
+};
 
 export const ROAST_LEVELS = {
   BEGINNER: {
-    name: "初级：职场小白",
-    description: "应对办公室里的阴阳怪气。",
-    prompt: "模拟一个职场场景，对我进行一次轻微的阴阳怪气挑战。"
+    zh: { name: "初级：职场小白", description: "应对办公室里的阴阳怪气。" },
+    en: { name: "Beginner: Office Rookie", description: "Handle office passive-aggressiveness." },
+    prompt: {
+      zh: "模拟一个职场场景，对我进行一次轻微的阴阳怪气挑战。",
+      en: "Simulate an office scenario and give me a mild passive-aggressive challenge."
+    }
   },
   INTERMEDIATE: {
-    name: "中级：毒舌邻居",
-    description: "应对生活中的琐碎挑衅。",
-    prompt: "模拟一个生活场景，对我进行一次比较犀利的吐槽挑战。"
+    zh: { name: "中级：毒舌邻居", description: "应对生活中的琐碎挑衅。" },
+    en: { name: "Intermediate: Sharp Neighbor", description: "Handle petty provocations in life." },
+    prompt: {
+      zh: "模拟一个生活场景，对我进行一次比较犀利的吐槽挑战。",
+      en: "Simulate a daily life scenario and give me a sharp roast challenge."
+    }
   },
   ADVANCED: {
-    name: "高级：辩论之神",
-    description: "应对逻辑严密的降维打击。",
-    prompt: "模拟一个高难度的逻辑陷阱或降维打击，对我发起挑战。"
+    zh: { name: "高级：辩论之神", description: "应对逻辑严密的降维打击。" },
+    en: { name: "Advanced: Debate God", description: "Handle logically tight dimension-reduction strikes." },
+    prompt: {
+      zh: "模拟一个高难度的逻辑陷阱或降维打击，对我发起挑战。",
+      en: "Simulate a high-difficulty logical trap or dimension-reduction strike to challenge me."
+    }
   }
 };
 
 export const DEFENSE_TECHNIQUES = [
   {
-    title: "反问法 (The Mirror)",
-    description: "将对方的问题原封不动抛回去，让对方解释自己的无礼。",
-    scenario: "当有人问你‘你怎么还没结婚？’时，反问‘你为什么对我的私生活这么感兴趣？’"
+    zh: {
+      title: "反问法 (The Mirror)",
+      description: "将对方的问题原封不动抛回去，让对方解释自己的无礼。",
+      scenario: "当有人问你‘你怎么还没结婚？’时，反问‘你为什么对我的私生活这么感兴趣？’"
+    },
+    en: {
+      title: "The Mirror",
+      description: "Throw the opponent's question back at them, making them explain their own rudeness.",
+      scenario: "When someone asks 'Why aren't you married yet?', ask back 'Why are you so interested in my private life?'"
+    }
   },
   {
-    title: "幽默自黑 (Self-Deprecation)",
-    description: "抢在对方之前嘲笑自己，让对方的攻击失去着力点。",
-    scenario: "别人笑你胖，你可以说‘是啊，我这人就是心宽体胖，装的东西多。’"
+    zh: {
+      title: "幽默自黑 (Self-Deprecation)",
+      description: "抢在对方之前嘲笑自己，让对方的攻击失去着力点。",
+      scenario: "别人笑你胖，你可以说‘是啊，我这人就是心宽体胖，装的东西多。’"
+    },
+    en: {
+      title: "Self-Deprecation",
+      description: "Laugh at yourself before the opponent does, making their attack lose its target.",
+      scenario: "When someone mocks your weight, say 'Yeah, I'm just big-hearted and big-bodied, I can hold more stuff.'"
+    }
   },
   {
-    title: "降维打击 (Logic Trap)",
-    description: "指出对方逻辑中的荒谬之处，而不是纠结于事实。",
-    scenario: "对方说‘你行你上’，你可以回‘我评价个电冰箱还得自己会制冷吗？’"
+    zh: {
+      title: "降维打击 (Logic Trap)",
+      description: "指出对方逻辑中的荒谬之处，而不是纠结于事实。",
+      scenario: "对方说‘你行你上’，你可以回‘我评价个电冰箱还得自己会制冷吗？’"
+    },
+    en: {
+      title: "Logic Trap",
+      description: "Point out the absurdity in the opponent's logic instead of obsessing over facts.",
+      scenario: "When someone says 'If you're so good, do it yourself', reply 'Do I need to be a refrigerator to judge if it's cooling properly?'"
+    }
   },
   {
-    title: "夸张法 (Hyperbole)",
-    description: "顺着对方的话极度夸张，让攻击变得荒诞可笑。",
-    scenario: "对方说‘你这衣服真难看’，回‘是吧？我专门挑了件能衬托你审美的。’"
+    zh: {
+      title: "夸张法 (Hyperbole)",
+      description: "顺着对方的话极度夸张，让攻击变得荒诞可笑。",
+      scenario: "对方说‘你这衣服真难看’，回‘是吧？我专门挑了件能衬托你审美的。’"
+    },
+    en: {
+      title: "Hyperbole",
+      description: "Exaggerate the opponent's words to the extreme, making the attack look ridiculous.",
+      scenario: "When someone says 'Your clothes are ugly', reply 'Right? I specifically picked this to match your aesthetic.'"
+    }
   },
   {
-    title: "沉默力量 (The Void)",
-    description: "盯着对方看3秒不说话，让尴尬的气氛反噬攻击者。",
-    scenario: "对方讲了一个针对你的冷笑话，你面无表情地盯着他直到他自己觉得尴尬。"
+    zh: {
+      title: "沉默力量 (The Void)",
+      description: "盯着对方看3秒不说话，让尴尬的气氛反噬攻击者。",
+      scenario: "对方讲了一个针对你的冷笑话，你面无表情地盯着他直到他自己觉得尴尬。"
+    },
+    en: {
+      title: "The Void",
+      description: "Stare at the opponent for 3 seconds without speaking, letting the awkwardness backfire on the attacker.",
+      scenario: "When someone tells a cold joke at your expense, stare at them expressionlessly until they feel awkward."
+    }
   },
   {
-    title: "转移视线 (Redirection)",
-    description: "不正面回应，直接开启一个完全无关但让对方无法拒绝的话题。",
-    scenario: "对方在饭桌上刁难你，你转头问‘哎，你听说了吗？那家公司最近股票大跌。’"
+    zh: {
+      title: "转移视线 (Redirection)",
+      description: "不正面回应，直接开启一个完全无关但让对方无法拒绝的话题。",
+      scenario: "对方在饭桌上刁难你，你转头问‘哎，你听说了吗？那家公司最近股票大跌。’"
+    },
+    en: {
+      title: "Redirection",
+      description: "Don't respond directly; start a completely unrelated but irresistible topic.",
+      scenario: "When someone picks on you at dinner, turn and ask 'Hey, did you hear? That company's stock crashed today.'"
+    }
   },
   {
-    title: "承认并升华 (Acknowledge & Elevate)",
-    description: "大方承认对方指出的事实，但赋予其正面意义。",
-    scenario: "对方说‘你这人真固执’，回‘谢谢，我更愿意称之为对目标的坚持。’"
+    zh: {
+      title: "承认并升华 (Acknowledge & Elevate)",
+      description: "大方承认对方指出的事实，但赋予其正面意义。",
+      scenario: "对方说‘你这人真固执’，回‘谢谢，我更愿意称之为对目标的坚持。’"
+    },
+    en: {
+      title: "Acknowledge & Elevate",
+      description: "Generously admit the fact pointed out by the opponent, but give it a positive meaning.",
+      scenario: "When someone says 'You're so stubborn', reply 'Thanks, I prefer to call it persistence towards my goals.'"
+    }
   },
   {
-    title: "逻辑拆解 (Deconstruction)",
-    description: "把对方的攻击拆解成几个客观事实，消除其情绪伤害。",
-    scenario: "对方大吼‘你真笨’，回‘所以你的意思是，我刚才那个操作不符合你的预期？’"
+    zh: {
+      title: "逻辑拆解 (Deconstruction)",
+      description: "把对方的攻击拆解成几个客观事实，消除其情绪伤害。",
+      scenario: "对方大吼‘你真笨’，回‘所以你的意思是，我刚才那个操作不符合你的预期？’"
+    },
+    en: {
+      title: "Deconstruction",
+      description: "Break down the attack into objective facts to eliminate emotional harm.",
+      scenario: "When someone yells 'You're so stupid', reply 'So you mean my previous action didn't meet your expectations?'"
+    }
   },
   {
-    title: "降温处理 (Cooling Down)",
-    description: "用极度冷静、礼貌的语气回应愤怒，让对方显得像个疯子。",
-    scenario: "面对咆哮，平静地说‘我理解你现在很激动，等你想清楚怎么沟通了我们再谈。’"
+    zh: {
+      title: "降温处理 (Cooling Down)",
+      description: "用极度冷静、礼貌的语气回应愤怒，让对方显得像个疯子。",
+      scenario: "面对咆哮，平静地说‘我理解你现在很激动，等你想清楚怎么沟通了我们再谈。’"
+    },
+    en: {
+      title: "Cooling Down",
+      description: "Respond to anger with extreme calmness and politeness, making the opponent look like a madman.",
+      scenario: "Facing a roar, calmly say 'I understand you're very excited right now. Let's talk when you've figured out how to communicate.'"
+    }
   },
   {
-    title: "礼貌拒绝 (Polite Refusal)",
-    description: "不解释，不借口，直接拒绝，不给对方纠缠的机会。",
-    scenario: "被要求无理加班，直接说‘不好意思，我今天有个人安排，无法配合。’"
+    zh: {
+      title: "礼貌拒绝 (Polite Refusal)",
+      description: "不解释，不借口，直接拒绝，不给对方纠缠的机会。",
+      scenario: "被要求无理加班，直接说‘不好意思，我今天有个人安排，无法配合。’"
+    },
+    en: {
+      title: "Polite Refusal",
+      description: "No explanation, no excuses; refuse directly to give no chance for pestering.",
+      scenario: "When asked for unreasonable overtime, say 'Sorry, I have personal plans today and cannot cooperate.'"
+    }
   }
 ];
 
 export const EMOTION_TIPS = [
   {
-    title: "深呼吸法 (6-2-8法则)",
-    tip: "吸气6秒，憋气2秒，呼气8秒。这能强制切换副交感神经，降低心率。"
+    zh: {
+      title: "深呼吸法 (6-2-8法则)",
+      tip: "吸气6秒，憋气2秒，呼气8秒。这能强制切换副交感神经，降低心率。"
+    },
+    en: {
+      title: "Deep Breathing (6-2-8)",
+      tip: "Inhale for 6s, hold for 2s, exhale for 8s. This forces a switch to the parasympathetic nervous system."
+    }
   },
   {
-    title: "认知重构 (Reframing)",
-    tip: "告诉自己：‘他不是在攻击我，他只是在展示他自己的无能和焦虑。’"
+    zh: {
+      title: "认知重构 (Reframing)",
+      tip: "告诉自己：‘他不是在攻击我，他只是在展示他自己的无能和焦虑。’"
+    },
+    en: {
+      title: "Cognitive Reframing",
+      tip: "Tell yourself: 'They aren't attacking me; they're just showing their own incompetence and anxiety.'"
+    }
   },
   {
-    title: "物理抽离 (Space Out)",
-    tip: "在脑海中想象自己站在天花板俯瞰这场争吵，把参与者看作两只滑稽的猴子。"
+    zh: {
+      title: "物理抽离 (Space Out)",
+      tip: "在脑海中想象自己站在天花板俯瞰这场争吵，把参与者看作两只滑稽的猴子。"
+    },
+    en: {
+      title: "Physical Detachment",
+      tip: "Imagine yourself on the ceiling looking down at the argument, seeing the participants as two funny monkeys."
+    }
   },
   {
-    title: "延迟反应 (The 5-Second Rule)",
-    tip: "在开口回击前，在心里默数5个数。这5秒足以让理智重新上线。"
+    zh: {
+      title: "延迟反应 (The 5-Second Rule)",
+      tip: "在开口回击前，在心里默数5个数。这5秒足以让理智重新上线。"
+    },
+    en: {
+      title: "The 5-Second Rule",
+      tip: "Count to 5 in your head before responding. These 5 seconds are enough for your reason to come back online."
+    }
   }
 ];
 
 export const DEBATE_TOPICS = [
   {
-    title: "远程办公 vs 办公室办公",
-    context: "随着技术成熟，远程办公是否应该成为所有企业的标配？"
+    zh: { title: "远程办公 vs 办公室办公", context: "随着技术成熟，远程办公是否应该成为所有企业的标配？" },
+    en: { title: "Remote vs Office", context: "Should remote work become standard for all companies as technology matures?" }
   },
   {
-    title: "AI 艺术是否具有灵魂",
-    context: "AI生成的画作是否能被称为‘艺术’，还是仅仅是数据的堆砌？"
+    zh: { title: "AI 艺术是否具有灵魂", context: "AI生成的画作是否能被称为‘艺术’，还是仅仅是数据的堆砌？" },
+    en: { title: "Does AI Art Have a Soul?", context: "Can AI-generated paintings be called 'art', or are they just data piles?" }
   },
   {
-    title: "婚姻是否是现代社会的必需品",
-    context: "在个体经济独立的今天，婚姻制度是否已经过时？"
+    zh: { title: "婚姻是否是现代社会的必需品", context: "在个体经济独立的今天，婚姻制度是否已经过时？" },
+    en: { title: "Is Marriage Necessary?", context: "Is the institution of marriage outdated in today's era of individual economic independence?" }
   },
   {
-    title: "社交媒体让人们更亲近还是更孤独",
-    context: "数字连接的增加是否以牺牲真实的深度社交为代价？"
+    zh: { title: "社交媒体让人们更亲近还是更孤独", context: "数字连接的增加是否以牺牲真实的深度社交为代价？" },
+    en: { title: "Social Media: Closer or Lonelier?", context: "Is the increase in digital connection at the cost of real, deep social interaction?" }
   },
   {
-    title: "隐私权是否应该为公共安全让步",
-    context: "在反恐和防疫背景下，政府是否有权监控公民隐私？"
+    zh: { title: "隐私权是否应该为公共安全让步", context: "在反恐和防疫背景下，政府是否有权监控公民隐私？" },
+    en: { title: "Privacy vs Public Safety", context: "Does the government have the right to monitor citizen privacy for counter-terrorism or pandemic control?" }
   },
   {
-    title: "加班文化是奋斗还是剥削",
-    context: "‘996’是年轻人提升竞争力的捷径，还是对劳动权的侵犯？"
+    zh: { title: "加班文化是奋斗还是剥削", context: "‘996’是年轻人提升竞争力的捷径，还是对劳动权的侵犯？" },
+    en: { title: "Overtime: Hustle or Exploitation?", context: "Is '996' a shortcut for youth to improve competitiveness or a violation of labor rights?" }
   },
   {
-    title: "元宇宙是人类的未来还是逃避",
-    context: "虚拟世界的发展是否会导致人类对现实世界的彻底放弃？"
+    zh: { title: "元宇宙是人类的未来还是逃避", context: "虚拟世界的发展是否会导致人类对现实世界的彻底放弃？" },
+    en: { title: "Metaverse: Future or Escape?", context: "Will the development of virtual worlds lead to humanity's complete abandonment of the real world?" }
   },
   {
-    title: "素食主义是否应该全球推广",
-    context: "基于环保和伦理，全人类是否应该停止食用肉类？"
+    zh: { title: "素食主义是否应该全球推广", context: "基于环保和伦理，全人类是否应该停止食用肉类？" },
+    en: { title: "Global Veganism?", context: "Based on environment and ethics, should all of humanity stop eating meat?" }
   },
   {
-    title: "电子竞技是否应该进入奥运会",
-    context: "智力与反应的竞技是否等同于传统体育的身体竞技？"
+    zh: { title: "电子竞技是否应该进入奥运会", context: "智力与反应的竞技是否等同于传统体育的身体竞技？" },
+    en: { title: "Esports in Olympics?", context: "Is competition of wit and reaction equivalent to the physical competition of traditional sports?" }
   },
   {
-    title: "短视频是否正在摧毁人类的专注力",
-    context: "碎片化信息流是否导致了人类深度思考能力的退化？"
+    zh: { title: "短视频是否正在摧毁人类的专注力", context: "碎片化信息流是否导致了人类深度思考能力的退化？" },
+    en: { title: "Short Videos vs Focus", context: "Is fragmented information flow causing the degradation of humanity's deep thinking ability?" }
   },
   {
-    title: "大学学历是否依然是成功的敲门砖",
-    context: "在技能导向的时代，四年大学教育的投资回报率是否合理？"
+    zh: { title: "大学学历是否依然是成功的敲门砖", context: "在技能导向的时代，四年大学教育的投资回报率是否合理？" },
+    en: { title: "Is a Degree Still a Key?", context: "In a skill-oriented era, is the ROI of a four-year university education reasonable?" }
   },
   {
-    title: "是否应该支持基因编辑婴儿",
-    context: "为了消除遗传病，人类是否有权修改后代的基因？"
+    zh: { title: "是否应该支持基因编辑婴儿", context: "为了消除遗传病，人类是否有权修改后代的基因？" },
+    en: { title: "Gene-Edited Babies?", context: "Does humanity have the right to modify the genes of offspring to eliminate hereditary diseases?" }
   },
   {
-    title: "网红经济是否误导了青少年的价值观",
-    context: "‘出名要趁早’的氛围是否让年轻人变得浮躁？"
+    zh: { title: "网红经济是否误导了青少年的价值观", context: "‘出名要趁早’的氛围是否让年轻人变得浮躁？" },
+    en: { title: "Influencer Economy vs Values", context: "Does the 'fame should come early' atmosphere make young people impetuous?" }
   },
   {
-    title: "延迟退休是否是解决养老金危机的唯一出路",
-    context: "面对老龄化，除了让老人多干几年，还有更好的办法吗？"
+    zh: { title: "延迟退休是否是解决养老金危机的唯一出路", context: "面对老龄化，除了让老人多干几年，还有更好的办法吗？" },
+    en: { title: "Delayed Retirement?", context: "Facing aging, is there a better way than making the elderly work for a few more years?" }
   },
   {
-    title: "网络匿名制是否应该被取消",
-    context: "为了打击网络暴力，是否应该强制推行全网实名制？"
+    zh: { title: "网络匿名制是否应该被取消", context: "为了打击网络暴力，是否应该强制推行全网实名制？" },
+    en: { title: "End Online Anonymity?", context: "Should mandatory real-name registration be enforced to combat cyberbullying?" }
   },
   {
-    title: "宠物是否应该享有法律意义上的‘人权’",
-    context: "作为家庭成员，宠物的法律地位是否应该得到提升？"
+    zh: { title: "宠物是否应该享有法律意义上的‘人权’", context: "作为家庭成员，宠物的法律地位是否应该得到提升？" },
+    en: { title: "Animal Rights as Human Rights?", context: "As family members, should the legal status of pets be elevated?" }
   },
   {
-    title: "太空探索是否是浪费资源",
-    context: "在地球问题尚未解决前，投入巨资探索火星是否值得？"
+    zh: { title: "太空探索是否是浪费资源", context: "在地球问题尚未解决前，投入巨资探索火星是否值得？" },
+    en: { title: "Space Exploration: Wasteful?", context: "Is it worth investing huge sums in Mars exploration before Earth's problems are solved?" }
   },
   {
-    title: "知识付费是缓解焦虑还是制造焦虑",
-    context: "买课是为了学习，还是为了买一个‘我在进步’的幻觉？"
+    zh: { title: "知识付费是缓解焦虑还是制造焦虑", context: "买课是为了学习，还是为了买一个‘我在进步’的幻觉？" },
+    en: { title: "Paid Knowledge: Help or Hype?", context: "Is buying courses for learning or for the illusion of 'I'm making progress'?" }
   },
   {
-    title: "单身税是否具有合理性",
-    context: "为了应对少子化，国家是否应该对单身人士征收更多税费？"
+    zh: { title: "单身税是否具有合理性", context: "为了应对少子化，国家是否应该对单身人士征收更多税费？" },
+    en: { title: "Single Tax?", context: "To deal with low birth rates, should the state levy more taxes on single people?" }
   },
   {
-    title: "人工智能是否应该拥有法律责任",
-    context: "如果自动驾驶汽车撞了人，责任应该归属于谁？"
+    zh: { title: "人工智能是否应该拥有法律责任", context: "如果自动驾驶汽车撞了人，责任应该归属于谁？" },
+    en: { title: "AI Legal Liability?", context: "If an autonomous car hits someone, who should be held responsible?" }
   }
 ];
 

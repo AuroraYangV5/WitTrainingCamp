@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Mic, Send, Trash2, Info, ChevronRight, Sparkles, Zap } from 'lucide-react';
-import { ROAST_LEVELS, RoastEvaluation } from './constants';
+import { MessageSquare, Mic, Send, Trash2, Info, ChevronRight, Sparkles, Zap, Languages } from 'lucide-react';
+import { ROAST_LEVELS, RoastEvaluation, GET_SYSTEM_INSTRUCTION } from './constants';
 import { geminiService } from './services/geminiService';
+import { qwenService } from './services/qwenService';
 import { VoiceInterface } from './components/VoiceInterface';
 import { ScoreBoard } from './components/ScoreBoard';
 import { Library } from './components/Library';
+import { UI_TRANSLATIONS, Language } from './translations';
 import Markdown from 'react-markdown';
 
 interface Message {
@@ -14,6 +16,8 @@ interface Message {
 }
 
 export default function App() {
+  const [language, setLanguage] = useState<Language>('zh');
+  const [provider, setProvider] = useState<'gemini' | 'qwen'>('qwen');
   const [activeTab, setActiveTab] = useState<'train' | 'library'>('train');
   const [level, setLevel] = useState<keyof typeof ROAST_LEVELS | 'CUSTOM' | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);
@@ -23,20 +27,39 @@ export default function App() {
   const [evaluation, setEvaluation] = useState<RoastEvaluation | null>(null);
   const [showVoice, setShowVoice] = useState(false);
 
+  const t = UI_TRANSLATIONS[language];
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'zh' ? 'en' : 'zh');
+    reset(); // Reset session when language changes to avoid mixed language history
+  };
+
+  const toggleProvider = () => {
+    const nextProvider = provider === 'gemini' ? 'qwen' : 'gemini';
+    setProvider(nextProvider);
+    reset();
+  };
+
   const startChallenge = async (selectedLevel: keyof typeof ROAST_LEVELS | 'CUSTOM', customPrompt?: string) => {
     setLevel(selectedLevel);
     setIsTyping(true);
     try {
-      const prompt = selectedLevel === 'CUSTOM' ? `针对以下主题发起一个怼人挑战：${customPrompt}` : ROAST_LEVELS[selectedLevel].prompt;
-      const challengeText = await geminiService.generateChallenge(prompt);
+      const prompt = selectedLevel === 'CUSTOM' 
+        ? (language === 'en' ? `Start a roast challenge on this topic: ${customPrompt}` : `针对以下主题发起一个怼人挑战：${customPrompt}`)
+        : ROAST_LEVELS[selectedLevel].prompt[language];
+      
+      const challengeText = provider === 'gemini' 
+        ? await geminiService.generateChallenge(prompt, language)
+        : await qwenService.generateChallenge(prompt, language);
+        
       setChallenge(challengeText);
-      setMessages([{ role: 'model', text: challengeText }]);
+      setMessages([{ role: 'model', text: challengeText || '' }]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -44,9 +67,10 @@ export default function App() {
     }
   };
 
-  const handleSelectTopic = (topic: { title: string; context: string }) => {
+  const handleSelectTopic = (topic: { zh: { title: string; context: string }; en: { title: string; context: string } }) => {
     setActiveTab('train');
-    startChallenge('CUSTOM', `主题：${topic.title}。背景：${topic.context}`);
+    const localizedTopic = topic[language];
+    startChallenge('CUSTOM', `${language === 'en' ? 'Topic' : '主题'}：${localizedTopic.title}。${language === 'en' ? 'Context' : '背景'}：${localizedTopic.context}`);
   };
 
   const handleSend = async () => {
@@ -59,15 +83,41 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      // Get a witty reply from the bot to continue the argument
-      const chat = geminiService.createChat(`你是一个怼人大师。你正在和一个用户进行对线挑战。
-      当前挑战场景：${challenge}
-      你的目标是继续用犀利、幽默、带点攻击性但不失风度的语言回击用户，引导对话继续。
-      保持简短，不要超过两句话。`);
+      const replyInstruction = language === 'en'
+        ? `You are a world-class roast master. You are currently in a HEATED roast battle with the user.
+        Current scenario: ${challenge}
+        
+        STRICT RULES:
+        1. STAY IN CHARACTER. You are the opponent, not a coach.
+        2. DO NOT provide any feedback, scores, or suggestions during the battle.
+        3. DO NOT be polite. Be witty, sharp, and savage.
+        4. Keep your response short and punchy (max 2 sentences).
+        5. Your goal is to keep the battle going by provoking the user further.
+        6. Respond in English.`
+        : `你是一个世界级的怼人大师。你现在正和用户进行一场激烈的对线挑战。
+        当前场景：${challenge}
+        
+        严格规则：
+        1. 必须保持人设。你现在是用户的对手，不是教练。
+        2. 战斗结束前，严禁给出任何评价、打分或改进建议。
+        3. 不要礼貌，要机智、犀利、毒舌。
+        4. 回复要短促有力（最多两句话）。
+        5. 你的目标是通过进一步的挑衅让对线持续下去。
+        6. 使用中文回复。`;
+
+      let replyText = "";
+      if (provider === 'gemini') {
+        // Pass the existing messages (history) to createChat
+        const chat = geminiService.createChat(replyInstruction, messages);
+        const response = await chat.sendMessage({ message: userMsg });
+        replyText = response.text || "";
+      } else {
+        // Pass the existing messages (history) to sendMessage
+        // The service will append the new userMsg to the history it sends to the API
+        replyText = await qwenService.sendMessage(messages.map(m => ({ role: m.role, text: m.text })), userMsg, replyInstruction) || "";
+      }
       
-      // Pass history to chat if needed, but for simplicity we'll just send the last message or use the chat object
-      const response = await chat.sendMessage({ message: userMsg });
-      setMessages(prev => [...prev, { role: 'model', text: response.text || "不错，有点意思，再来！" }]);
+      setMessages(prev => [...prev, { role: 'model', text: replyText || (language === 'en' ? "Not bad, interesting!" : "不错，有点意思，再来！") }]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -79,7 +129,10 @@ export default function App() {
     if (messages.length < 2) return;
     setIsTyping(true);
     try {
-      const evalResult = await geminiService.evaluateResponse(messages);
+      const evalResult = provider === 'gemini'
+        ? await geminiService.evaluateResponse(messages, language)
+        : await qwenService.evaluateResponse(messages, language);
+        
       if (evalResult) {
         setEvaluation(evalResult);
       }
@@ -100,25 +153,44 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col md:flex-row bg-brutal-black text-gallery-white">
       {/* Sidebar / Level Selection */}
-      <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-6 flex flex-col">
-        <div className="mb-8">
-          <h1 className="font-display text-5xl uppercase leading-none tracking-tighter mb-2">毒舌<br />训练营</h1>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-50">Sarcasm Bootcamp v1.0</p>
+      <aside className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-6 flex flex-col min-h-0">
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="font-display text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</h1>
+            <p className="font-mono text-[10px] uppercase tracking-widest opacity-50">{t.subtitle}</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={toggleLanguage}
+              className="p-2 brutal-border hover:bg-neon-green hover:text-brutal-black transition-all"
+              title="Switch Language"
+            >
+              <Languages size={20} />
+            </button>
+            <button 
+              onClick={toggleProvider}
+              className={`p-2 brutal-border transition-all flex items-center justify-center gap-2 ${provider === 'qwen' ? 'bg-neon-green text-brutal-black' : 'hover:bg-neon-green hover:text-brutal-black'}`}
+              title={t.selectModel}
+            >
+              <Sparkles size={16} />
+              <span className="font-mono text-[10px] font-bold">{provider === 'gemini' ? 'GEMINI' : 'QWEN'}</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-2">
           <div className="flex gap-2 mb-6">
             <button 
               onClick={() => { setActiveTab('train'); reset(); }}
               className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'train' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
-              实战训练
+              {t.trainTab}
             </button>
             <button 
               onClick={() => setActiveTab('library')}
               className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'library' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
-              知识库
+              {t.libraryTab}
             </button>
           </div>
 
@@ -132,7 +204,7 @@ export default function App() {
                 className="space-y-4"
               >
                 <h2 className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
-                  <Sparkles size={14} className="text-neon-green" /> 选择段位
+                  <Sparkles size={14} className="text-neon-green" /> {t.selectLevel}
                 </h2>
                 {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
                   <button
@@ -145,8 +217,8 @@ export default function App() {
                         : 'hover:bg-gallery-white hover:text-brutal-black'
                     } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
                   >
-                    <div className="font-display text-xl uppercase">{ROAST_LEVELS[key].name}</div>
-                    <div className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key].description}</div>
+                    <div className="font-display text-xl uppercase">{ROAST_LEVELS[key][language].name}</div>
+                    <div className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key][language].description}</div>
                   </button>
                 ))}
               </motion.div>
@@ -160,10 +232,10 @@ export default function App() {
               >
                 <div className="flex items-center gap-3 text-neon-green">
                   <Info size={16} />
-                  <span className="font-mono text-xs uppercase font-bold">理论指导</span>
+                  <span className="font-mono text-xs uppercase font-bold">{t.theoryGuide}</span>
                 </div>
                 <p className="text-xs opacity-60 leading-relaxed">
-                  在这里学习如何优雅地反击、控制情绪，并浏览我们为您准备的辩论题库。
+                  {t.theoryGuideDesc}
                 </p>
               </motion.div>
             )}
@@ -175,7 +247,7 @@ export default function App() {
             onClick={() => setShowVoice(true)}
             className="w-full py-4 bg-neon-green text-brutal-black font-display text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
           >
-            <Mic size={24} /> 语音对线
+            <Mic size={24} /> {t.voiceBattle}
           </button>
         </div>
       </aside>
@@ -191,7 +263,7 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="flex-1 flex flex-col min-h-0"
             >
-              <Library onSelectTopic={handleSelectTopic} />
+              <Library onSelectTopic={handleSelectTopic} language={language} />
             </motion.div>
           ) : !level ? (
             <motion.div 
@@ -205,21 +277,21 @@ export default function App() {
                 <div className="w-24 h-24 bg-neon-green rounded-full mx-auto flex items-center justify-center text-brutal-black">
                   <Zap size={48} />
                 </div>
-                <h2 className="font-display text-6xl uppercase tracking-tighter">准备好<br />被虐了吗？</h2>
-                <p className="font-sans text-lg opacity-70">选择一个段位，开始你的“怼人”进阶之路。我们会模拟真实场景，训练你的临场反应。</p>
+                <h2 className="font-display text-6xl uppercase tracking-tighter">{t.readyToRoast}</h2>
+                <p className="font-sans text-lg opacity-70">{t.welcomeDesc}</p>
                 <div className="pt-8 flex flex-col gap-4">
                   <div className="flex items-center gap-4 text-left p-4 glass-panel">
                     <div className="bg-white/10 p-2 rounded"><MessageSquare size={20} /></div>
                     <div>
-                      <div className="font-bold text-sm">文字训练</div>
-                      <div className="text-xs opacity-50">深度分析，优雅回击</div>
+                      <div className="font-bold text-sm">{t.textTraining}</div>
+                      <div className="text-xs opacity-50">{t.textTrainingDesc}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-left p-4 glass-panel">
                     <div className="bg-white/10 p-2 rounded"><Mic size={20} /></div>
                     <div>
-                      <div className="font-bold text-sm">语音对线</div>
-                      <div className="text-xs opacity-50">实时模拟，压力测试</div>
+                      <div className="font-bold text-sm">{t.voiceTraining}</div>
+                      <div className="text-xs opacity-50">{t.voiceTrainingDesc}</div>
                     </div>
                   </div>
                 </div>
@@ -240,9 +312,9 @@ export default function App() {
                   </div>
                   <div>
                     <div className="font-bold text-sm uppercase">
-                      {level === 'CUSTOM' ? '自定义话题挑战' : ROAST_LEVELS[level].name}
+                      {level === 'CUSTOM' ? t.customTopic : ROAST_LEVELS[level][language].name}
                     </div>
-                    <div className="text-[10px] font-mono text-neon-green">ACTIVE SESSION</div>
+                    <div className="text-[10px] font-mono text-neon-green">{t.activeSession}</div>
                   </div>
                 </div>
                 <button onClick={reset} className="p-2 hover:bg-red-500/20 text-red-500 transition-colors">
@@ -265,7 +337,7 @@ export default function App() {
                         : 'bg-white/10 border border-white/20'
                     }`}>
                       <div className="font-mono text-[10px] uppercase opacity-50 mb-1">
-                        {msg.role === 'user' ? 'YOU' : 'ROAST MASTER'}
+                        {msg.role === 'user' ? t.you : t.roastMaster}
                       </div>
                       <div className="prose prose-invert prose-sm max-w-none">
                         <Markdown>{msg.text}</Markdown>
@@ -281,6 +353,7 @@ export default function App() {
                         <div className="w-2 h-2 bg-white rounded-full" />
                         <div className="w-2 h-2 bg-white rounded-full" />
                       </div>
+                      <span className="text-[10px] font-mono ml-2 opacity-50">{t.typing}</span>
                     </div>
                   </div>
                 )}
@@ -295,7 +368,7 @@ export default function App() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="输入你的回击..."
+                    placeholder={t.inputPlaceholder}
                     className="flex-1 bg-white/5 border-2 border-white/20 p-4 font-sans focus:border-neon-green outline-none transition-colors"
                   />
                   <button 
@@ -315,7 +388,7 @@ export default function App() {
                     disabled={isTyping}
                     className="w-full py-2 border-2 border-neon-green text-neon-green font-mono text-xs uppercase tracking-widest hover:bg-neon-green hover:text-brutal-black transition-all disabled:opacity-50"
                   >
-                    [ 结束对线并查看评分 ]
+                    {t.endAndEvaluate}
                   </motion.button>
                 )}
               </div>
@@ -327,7 +400,7 @@ export default function App() {
         <AnimatePresence>
           {evaluation && (
             <div className="absolute inset-0 z-40 bg-brutal-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-              <ScoreBoard evaluation={evaluation} onReset={() => setEvaluation(null)} />
+              <ScoreBoard evaluation={evaluation} onReset={() => setEvaluation(null)} language={language} />
             </div>
           )}
         </AnimatePresence>
@@ -338,7 +411,8 @@ export default function App() {
         {showVoice && (
           <VoiceInterface 
             onClose={() => setShowVoice(false)} 
-            systemInstruction="你是一个怼人大师。现在进入语音对线模式。你要用犀利、幽默、机智的语言和用户对线。用户说话后，你要立刻给出回击，并偶尔评价一下用户的表现。保持快节奏，充满能量。"
+            language={language}
+            systemInstruction={GET_SYSTEM_INSTRUCTION(language)}
           />
         )}
       </AnimatePresence>

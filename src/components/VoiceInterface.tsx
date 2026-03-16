@@ -2,17 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { Mic, MicOff, X, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { UI_TRANSLATIONS, Language } from '../translations';
 
 interface VoiceInterfaceProps {
   onClose: () => void;
   systemInstruction: string;
+  language: Language;
 }
 
-export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ onClose, systemInstruction }) => {
+export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ onClose, systemInstruction, language }) => {
   const [isConnecting, setIsConnecting] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState<string>('');
   const [aiTranscript, setAiTranscript] = useState<string>('');
+  const t = UI_TRANSLATIONS[language];
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -163,7 +166,7 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ onClose, systemI
       </button>
 
       <div className="text-center space-y-8 max-w-2xl w-full">
-        <h2 className="font-display text-6xl uppercase tracking-tighter">语音对线中</h2>
+        <h2 className="font-display text-6xl uppercase tracking-tighter">{t.voiceBattle}</h2>
         
         <div className="relative h-64 flex items-center justify-center">
           <AnimatePresence>
@@ -189,7 +192,7 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ onClose, systemI
 
         <div className="space-y-4">
           <p className="font-mono text-sm uppercase tracking-widest opacity-50">
-            {isConnecting ? "正在建立连接..." : "请开始你的表演（回击）"}
+            {isConnecting ? (language === 'en' ? "Establishing connection..." : "正在建立连接...") : (language === 'en' ? "Please start your performance (comeback)" : "请开始你的表演（回击）")}
           </p>
           
           <div className="h-24 overflow-y-auto font-mono text-sm text-neon-green/80 italic">
@@ -200,7 +203,7 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ onClose, systemI
 
       <div className="absolute bottom-12 left-0 w-full overflow-hidden">
         <div className="marquee-track whitespace-nowrap">
-          {Array(10).fill(" ROAST TRAINING IN PROGRESS • ").map((text, i) => (
+          {Array(10).fill(language === 'en' ? " ROAST TRAINING IN PROGRESS • " : " 毒舌训练进行中 • ").map((text, i) => (
             <span key={i} className="font-display text-4xl uppercase opacity-20 mx-4">{text}</span>
           ))}
         </div>

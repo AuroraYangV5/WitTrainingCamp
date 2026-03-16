@@ -1,33 +1,37 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
-import { EVALUATION_SCHEMA } from "../constants";
+import { GoogleGenAI } from "@google/genai";
+import { EVALUATION_SCHEMA, GET_SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  public ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
   }
 
-  async generateChallenge(levelPrompt: string) {
+  async generateChallenge(levelPrompt: string, lang: 'zh' | 'en') {
     const response = await this.ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: levelPrompt,
       config: {
-        systemInstruction: "你现在要发起一个怼人挑战。直接说出你的挑衅内容，不要废话。",
+        systemInstruction: GET_SYSTEM_INSTRUCTION(lang),
       },
     });
     return response.text;
   }
 
-  async evaluateResponse(history: { role: string; text: string }[]) {
-    const historyText = history.map(m => `${m.role === 'user' ? '用户' : 'AI'}: ${m.text}`).join('\n');
-    const prompt = `以下是整场对线的对话记录：\n${historyText}\n\n请根据整场表现给出综合评价。`;
+  async evaluateResponse(history: { role: string; text: string }[], lang: 'zh' | 'en') {
+    const historyText = history.map(m => `${m.role === 'user' ? (lang === 'en' ? 'User' : '用户') : 'AI'}: ${m.text}`).join('\n');
+    const prompt = lang === 'en' 
+      ? `Here is the conversation history:\n${historyText}\n\nPlease provide a comprehensive evaluation based on the entire performance.`
+      : `以下是整场对线的对话记录：\n${historyText}\n\n请根据整场表现给出综合评价。`;
     
     const response = await this.ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: prompt,
       config: {
-        systemInstruction: "你是一个怼人等级评测员。请根据整场对话中用户的回击表现（逻辑、幽默、杀伤力、情商）给出JSON格式的综合评价。",
+        systemInstruction: lang === 'en' 
+          ? "You are a roast level evaluator. Please provide a JSON evaluation of the user's comebacks (logic, humor, damage, EQ) throughout the conversation."
+          : "你是一个怼人等级评测员。请根据整场对话中用户的回击表现（逻辑、幽默、杀伤力、情商）给出JSON格式的综合评价。",
         responseMimeType: "application/json",
         responseSchema: EVALUATION_SCHEMA,
       },
@@ -41,9 +45,13 @@ export class GeminiService {
     }
   }
 
-  createChat(systemInstruction: string) {
+  createChat(systemInstruction: string, history: { role: 'user' | 'model'; text: string }[] = []) {
     return this.ai.chats.create({
       model: "gemini-3-flash-preview",
+      history: history.map(m => ({
+        role: m.role,
+        parts: [{ text: m.text }]
+      })),
       config: {
         systemInstruction,
       },
