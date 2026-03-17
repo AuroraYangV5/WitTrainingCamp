@@ -51,6 +51,7 @@ export default function App() {
   };
 
   const startChallenge = async (selectedLevel: keyof typeof ROAST_LEVELS | 'CUSTOM', customPrompt?: string) => {
+    reset();
     setLevel(selectedLevel);
     setIsTyping(true);
     try {
@@ -250,7 +251,6 @@ export default function App() {
                   <Button
                     key={String(key)}
                     onClick={() => startChallenge(key)}
-                    disabled={!!level}
                     className={`w-full text-left p-4 brutal-border transition-all group ${
                       level === key 
                         ? 'bg-neon-green text-brutal-black' 

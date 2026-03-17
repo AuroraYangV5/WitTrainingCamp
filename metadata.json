@@ -1,6 +1,6 @@
 {
   "name": "毒舌训练营 (Sarcasm Bootcamp)",
-  "description": "一个教你如何优雅怼人的模拟训练应用，支持文字与实时语音对话训练。",
+  "description": "一个教你如何优雅怼人的模拟训练应用，支持文字实时对话训练。",
   "requestFramePermissions": [
     "microphone"
   ]
