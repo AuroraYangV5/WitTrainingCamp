@@ -1,20 +1,61 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 那年今日 (On This Day)
 
-# Run and deploy your AI Studio app
+一个精致的、基于 AI 驱动的历史回顾应用。通过“那年今日”，您可以穿越时空，探索历史上每一个今天发生的重大事件、名人名言以及独特的历史韵味。
 
-This contains everything you need to run your app locally.
+## ✨ 特性
 
-View your app in AI Studio: https://ai.studio/apps/e751b141-d9a4-4558-ae6d-d316522b473c
+- **AI 驱动**：支持接入 **通义千问 (Qwen)** 和 **Google Gemini** 模型，获取深度定制的历史解读。
+- **精致设计**：采用复古纸张质感设计，配合优雅的排版和动画，提供沉浸式的阅读体验。
+- **日历探索**：内置全功能日历组件，支持自由选择日期，探索一年 365 天的任何一个瞬间。
+- **卡片分享**：支持将精美的历史卡片一键导出为图片，方便在社交媒体分享。
+- **双面交互**：卡片支持翻转，正面展示核心事件，背面提供更多历史细节。
+- **响应式布局**：完美适配桌面端和移动端。
 
-## Run Locally
+## 🚀 技术栈
 
-**Prerequisites:**  Node.js
+- **前端框架**：React 19 + TypeScript
+- **样式处理**：Tailwind CSS v4
+- **动画库**：Motion (framer-motion)
+- **UI 组件**：shadcn/ui (基于 @base-ui/react)
+- **图标库**：Lucide React
+- **日期处理**：date-fns
+- **图片导出**：html-to-image
 
+## 🛠️ 快速开始
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 环境要求
+
+- Node.js 18+
+- npm 或 pnpm
+
+### 安装步骤
+
+1. **克隆项目**
+   ```bash
+   git clone <your-repo-url>
+   cd history-on-this-day
+   ```
+
+2. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+3. **启动开发服务器**
+   ```bash
+   npm run dev
+   ```
+
+4. **配置 API Key**
+   打开应用后，点击右上角的“设置”图标，填入您的通义千问或 Gemini API Key 即可开始使用。
+
+## 📖 使用指南
+
+- **切换日期**：点击顶部的日期显示区域，使用日历选择特定日期；或使用左右箭头切换前后一天。
+- **翻转卡片**：点击卡片中心区域可翻转查看更多历史事件。
+- **下载分享**：点击卡片右下角的下载图标，即可保存当前页面的精美图片。
+- **回到今天**：点击右上角的刷新图标，快速返回当前日期。
+
+## 📄 开源协议
+
+本项目基于 MIT 协议开源。
