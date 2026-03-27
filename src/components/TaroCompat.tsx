@@ -32,3 +32,14 @@ export const Textarea: React.FC<any> = ({ value, onInput, className, placeholder
     {...props} 
   />
 );
+
+export const Input: React.FC<any> = ({ value, onInput, className, placeholder, type = 'text', ...props }) => (
+  <input 
+    type={type}
+    value={value} 
+    onChange={(e) => onInput && onInput(e)} 
+    className={className} 
+    placeholder={placeholder} 
+    {...props} 
+  />
+);

@@ -41,6 +41,12 @@ export const UI_TRANSLATIONS = {
     coachInputPlaceholder: "描述一下你遇到的情况，例如：‘同事阴阳怪气说我衣服难看’...",
     getAdvice: "获取回击建议",
     coachAdvice: "教练建议",
+    apiKeySettings: "API Key 设置",
+    apiKeyPlaceholder: "输入你的 API Key (可选)",
+    apiKeyWarning: "当前使用公共 API Key，免费额度有限且速度较慢。",
+    apiKeyConfig: "配置自己的 Key。",
+    apiKeySuccess: "已使用自定义 API Key",
+    save: "保存",
   },
   en: {
     title: "Roast Bootcamp",
@@ -84,6 +90,12 @@ export const UI_TRANSLATIONS = {
     coachInputPlaceholder: "Describe your situation, e.g., 'A colleague sarcastically said my clothes are ugly'...",
     getAdvice: "Get Advice",
     coachAdvice: "Coach's Advice",
+    apiKeySettings: "API Key Settings",
+    apiKeyPlaceholder: "Enter your API Key (Optional)",
+    apiKeyWarning: "Currently using public API Key, quota is limited and speed is slow.",
+    apiKeyConfig: "Configure your own Key.",
+    apiKeySuccess: "Using custom API Key",
+    save: "Save",
   }
 };
 

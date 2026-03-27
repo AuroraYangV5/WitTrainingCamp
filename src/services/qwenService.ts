@@ -19,9 +19,16 @@ export class QwenService {
     this.coachApiBase = process.env.VITE_QWEN_COACH_API_BASE || this.apiBase;
   }
 
+  public setApiKey(apiKey: string) {
+    this.apiKey = apiKey || process.env.VITE_QWEN_API_KEY || '';
+    this.coachApiKey = apiKey || process.env.VITE_QWEN_COACH_API_KEY || this.apiKey;
+  }
+
   async generateChallenge(levelPrompt: string, lang: 'zh' | 'en') {
-    const systemInstruction = GET_SYSTEM_INSTRUCTION(lang);
-    return this.callApi(systemInstruction, [{ role: 'user', content: levelPrompt }]);
+    // If it's Qwen and instructions are in backend, we should pass empty string.
+    // However, generateChallenge is a specific task. 
+    // But per user request, we skip passing the global instructions.
+    return this.callApi("", [{ role: 'user', content: levelPrompt }]);
   }
 
   async evaluateResponse(history: { role: string; text: string }[], lang: 'zh' | 'en') {
@@ -107,20 +114,20 @@ export class QwenService {
 
     const body: any = isAppApi ? {
       input: {
-        messages: [
+        messages: systemInstruction ? [
           { role: 'system', content: systemInstruction },
           ...messages
-        ]
+        ] : messages
       },
       parameters: {
         result_format: 'message'
       }
     } : {
       model: "qwen-plus-latest",
-      messages: [
+      messages: systemInstruction ? [
         { role: 'system', content: systemInstruction },
         ...messages
-      ],
+      ] : messages,
       response_format: isJson ? { type: "json_object" } : undefined
     };
 

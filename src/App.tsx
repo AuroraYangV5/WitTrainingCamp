@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Mic, Send, Trash2, Info, ChevronRight, Sparkles, Zap, Languages } from 'lucide-react';
+import { MessageSquare, Mic, Send, Trash2, Info, ChevronRight, Sparkles, Zap, Languages, Settings } from 'lucide-react';
 import { ROAST_LEVELS, RoastEvaluation, GET_SYSTEM_INSTRUCTION, GET_COACH_INSTRUCTION } from './constants';
 import { geminiService } from './services/geminiService';
 import { qwenService } from './services/qwenService';
@@ -9,7 +9,7 @@ import { ScoreBoard } from './components/ScoreBoard';
 import { Library } from './components/Library';
 import { UI_TRANSLATIONS, Language } from './translations';
 import Markdown from 'react-markdown';
-import { View, Text, ScrollView, Button, Textarea } from './components/TaroCompat';
+import { View, Text, ScrollView, Button, Textarea, Input } from './components/TaroCompat';
 
 interface Message {
   role: 'user' | 'model';
@@ -19,7 +19,7 @@ interface Message {
 export default function App() {
   const [language, setLanguage] = useState<Language>('zh');
   const [provider, setProvider] = useState<'gemini' | 'qwen'>('qwen');
-  const [activeTab, setActiveTab] = useState<'train' | 'library' | 'coach'>('train');
+  const [activeTab, setActiveTab] = useState<'train' | 'library' | 'coach' | 'settings'>('train');
   const [level, setLevel] = useState<keyof typeof ROAST_LEVELS | 'CUSTOM' | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -30,10 +30,29 @@ export default function App() {
   const [coachInput, setCoachInput] = useState('');
   const [coachAdvice, setCoachAdvice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [userGeminiKey, setUserGeminiKey] = useState('');
+  const [userQwenKey, setUserQwenKey] = useState('');
 
   const t = UI_TRANSLATIONS[language];
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const savedGeminiKey = localStorage.getItem('user_gemini_key') || '';
+    const savedQwenKey = localStorage.getItem('user_qwen_key') || '';
+    setUserGeminiKey(savedGeminiKey);
+    setUserQwenKey(savedQwenKey);
+    geminiService.setApiKey(savedGeminiKey);
+    qwenService.setApiKey(savedQwenKey);
+  }, []);
+
+  const saveApiKeys = () => {
+    localStorage.setItem('user_gemini_key', userGeminiKey);
+    localStorage.setItem('user_qwen_key', userQwenKey);
+    geminiService.setApiKey(userGeminiKey);
+    qwenService.setApiKey(userQwenKey);
+    // Show a small success message or just visual feedback
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -119,7 +138,7 @@ export default function App() {
       } else {
         // Pass the existing messages (history) to sendMessage
         // The service will append the new userMsg to the history it sends to the API
-        replyText = await qwenService.sendMessage(messages.map(m => ({ role: m.role, text: m.text })), userMsg, replyInstruction) || "";
+        replyText = await qwenService.sendMessage(messages.map(m => ({ role: m.role, text: m.text })), userMsg, "") || "";
       }
       
       setMessages(prev => [...prev, { role: 'model', text: replyText || (language === 'en' ? "Not bad, interesting!" : "不错，有点意思，再来！") }]);
@@ -156,15 +175,10 @@ export default function App() {
     setCoachAdvice(null);
     setErrorMessage(null);
     try {
-      const instruction = GET_COACH_INSTRUCTION(language);
+      const instruction = provider === 'gemini' ? GET_COACH_INSTRUCTION(language) : "";
       let advice = "";
       if (provider === 'gemini') {
-        const response = await geminiService.ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: coachInput,
-          config: { systemInstruction: instruction }
-        });
-        advice = response.text || "";
+        advice = await geminiService.generateContent(coachInput, instruction);
       } else {
         advice = await qwenService.sendMessage([], coachInput, instruction, true) || "";
       }
@@ -202,10 +216,10 @@ export default function App() {
       </AnimatePresence>
 
       {/* Sidebar / Level Selection */}
-      <View className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-4 md:p-6 flex flex-col shrink-0 sticky md:relative top-0 z-50 bg-brutal-black">
-        <View className="mb-6 md:mb-8 flex justify-between items-start">
+      <View className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r-2 border-gallery-white p-4 md:p-6 flex flex-col shrink-0 sticky top-0 z-50 bg-brutal-black">
+        <View className="mb-4 md:mb-8 flex justify-between items-start sticky top-0 bg-brutal-black z-10 pb-2 md:pb-0">
           <View>
-            <View className="font-display text-3xl md:text-5xl uppercase leading-none tracking-tighter mb-2">{t.title}</View>
+            <View className="font-display text-3xl md:text-5xl uppercase leading-none tracking-tighter mb-1 md:mb-2">{t.title}</View>
             <Text className="font-mono text-[10px] uppercase tracking-widest opacity-50">{t.subtitle}</Text>
           </View>
           <View className="flex flex-col gap-2">
@@ -220,18 +234,30 @@ export default function App() {
         </View>
 
         <ScrollView className="flex-1 space-y-4 overflow-y-auto pr-2" scrollY>
-          <View className="flex gap-2 mb-6">
+          <View className="flex gap-1 md:gap-2 mb-4 md:mb-6">
             <Button 
               onClick={() => { setActiveTab('train'); reset(); }}
-              className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'train' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
+              className={`flex-1 py-2 font-mono text-[9px] md:text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'train' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
               {t.trainTab}
             </Button>
             <Button 
+              onClick={() => setActiveTab('coach')}
+              className={`flex-1 py-2 font-mono text-[9px] md:text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'coach' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
+            >
+              {t.coachTab}
+            </Button>
+            <Button 
               onClick={() => setActiveTab('library')}
-              className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'library' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
+              className={`flex-1 py-2 font-mono text-[9px] md:text-[10px] uppercase tracking-widest border-2 transition-all ${activeTab === 'library' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
             >
               {t.libraryTab}
+            </Button>
+            <Button 
+              onClick={() => setActiveTab('settings')}
+              className={`flex-1 py-2 font-mono text-[9px] md:text-[10px] uppercase tracking-widest border-2 transition-all flex items-center justify-center ${activeTab === 'settings' ? 'bg-gallery-white text-brutal-black border-gallery-white' : 'border-white/20 hover:border-white'}`}
+            >
+              <Settings size={14} />
             </Button>
           </View>
 
@@ -242,25 +268,29 @@ export default function App() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="space-y-4"
+                className="space-y-2 md:space-y-4"
               >
-                <View className="font-mono text-xs uppercase font-bold mb-4 flex items-center gap-2">
+                <View className="font-mono text-[10px] md:text-xs uppercase font-bold mb-2 md:mb-4 flex items-center gap-2">
                   <Sparkles size={14} className="text-neon-green" /> {t.selectLevel}
                 </View>
-                {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
-                  <Button
-                    key={String(key)}
-                    onClick={() => startChallenge(key)}
-                    className={`w-full text-left p-4 brutal-border transition-all group ${
-                      level === key 
-                        ? 'bg-neon-green text-brutal-black' 
-                        : 'hover:bg-gallery-white hover:text-brutal-black'
-                    } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
-                  >
-                    <View className="font-display text-xl uppercase">{ROAST_LEVELS[key][language].name}</View>
-                    <View className="font-mono text-[10px] mt-1 opacity-70">{ROAST_LEVELS[key][language].description}</View>
-                  </Button>
-                ))}
+                <View className="grid grid-cols-3 md:grid-cols-1 gap-2 md:gap-4">
+                  {(Object.keys(ROAST_LEVELS) as Array<keyof typeof ROAST_LEVELS>).map((key) => (
+                    <Button
+                      key={String(key)}
+                      onClick={() => startChallenge(key)}
+                      className={`w-full text-left p-2 md:p-4 brutal-border transition-all group flex flex-col justify-center ${
+                        level === key 
+                          ? 'bg-neon-green text-brutal-black' 
+                          : 'hover:bg-gallery-white hover:text-brutal-black'
+                      } ${level && level !== key ? 'opacity-30 grayscale' : ''}`}
+                    >
+                      <View className="font-display text-xs md:text-xl uppercase text-center md:text-left whitespace-nowrap overflow-hidden">
+                        {ROAST_LEVELS[key][language].name}
+                      </View>
+                      <View className="font-mono text-[10px] mt-1 opacity-70 hidden md:block">{ROAST_LEVELS[key][language].description}</View>
+                    </Button>
+                  ))}
+                </View>
               </motion.div>
             ) : activeTab === 'coach' ? (
               <motion.div 
@@ -277,6 +307,47 @@ export default function App() {
                 <Text className="text-xs opacity-60 leading-relaxed">
                   {t.coachDesc}
                 </Text>
+              </motion.div>
+            ) : activeTab === 'settings' ? (
+              <motion.div 
+                key="settings-nav"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="p-4 glass-panel space-y-4"
+              >
+                <View className="flex items-center gap-3 text-neon-green">
+                  <Settings size={16} />
+                  <Text className="font-mono text-xs uppercase font-bold">{t.apiKeySettings}</Text>
+                </View>
+                <View className="space-y-4">
+                  <View>
+                    <Text className="font-mono text-[10px] uppercase opacity-50 mb-1">Gemini API Key</Text>
+                    <Input 
+                      type="password"
+                      value={userGeminiKey}
+                      onInput={(e: any) => setUserGeminiKey(e.target.value)}
+                      placeholder={t.apiKeyPlaceholder}
+                      className="w-full bg-white/5 border border-white/20 p-2 font-mono text-xs focus:border-neon-green outline-none"
+                    />
+                  </View>
+                  <View>
+                    <Text className="font-mono text-[10px] uppercase opacity-50 mb-1">Qwen API Key</Text>
+                    <Input 
+                      type="password"
+                      value={userQwenKey}
+                      onInput={(e: any) => setUserQwenKey(e.target.value)}
+                      placeholder={t.apiKeyPlaceholder}
+                      className="w-full bg-white/5 border border-white/20 p-2 font-mono text-xs focus:border-neon-green outline-none"
+                    />
+                  </View>
+                  <Button 
+                    onClick={saveApiKeys}
+                    className="w-full py-2 bg-neon-green text-brutal-black font-mono text-[10px] uppercase font-bold"
+                  >
+                    {t.save}
+                  </Button>
+                </View>
               </motion.div>
             ) : (
               <motion.div 
@@ -298,7 +369,7 @@ export default function App() {
           </AnimatePresence>
         </ScrollView>
 
-        <View className={`mt-auto pt-4 md:pt-6 border-t border-white/10 ${activeTab === 'library' ? 'hidden md:block' : ''}`}>
+        <View className={`mt-auto pt-4 md:pt-6 border-t border-white/10 hidden md:block ${activeTab === 'library' ? 'md:hidden' : ''}`}>
           <Button 
             onClick={() => setActiveTab('coach')}
             className={`w-full py-3 md:py-4 font-display text-xl md:text-2xl uppercase brutal-shadow flex items-center justify-center gap-3 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all ${
@@ -307,6 +378,12 @@ export default function App() {
           >
             <Zap size={20} /> {t.coachTab}
           </Button>
+        </View>
+
+        <View className="p-4 border-t border-white/10 text-center hidden md:block">
+          <a href="https://beian.miit.gov.cn" target="_blank" rel="noreferrer" className="text-[10px] font-mono opacity-30 hover:opacity-100 transition-opacity">
+            京ICP备2026014244号-1
+          </a>
         </View>
       </View>
 
@@ -463,12 +540,26 @@ export default function App() {
 
               {/* Input Area */}
               <View className="p-6 border-t border-white/10 space-y-4">
+                {((provider === 'gemini' && !userGeminiKey) || (provider === 'qwen' && !userQwenKey)) && (
+                  <View className="flex items-center gap-2 text-[10px] font-mono text-yellow-500/80 bg-yellow-500/5 p-2 border border-yellow-500/20">
+                    <Info size={12} />
+                    <View className="flex flex-wrap gap-x-1">
+                      <Text>{t.apiKeyWarning}</Text>
+                      <Text 
+                        onClick={() => setActiveTab('settings')}
+                        className="text-neon-green underline cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        {t.apiKeyConfig}
+                      </Text>
+                    </View>
+                  </View>
+                )}
                 <View className="flex gap-4">
-                  <input
+                  <Input
                     type="text"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    onInput={(e: any) => setInput(e.target.value)}
+                    onKeyDown={(e: any) => e.key === 'Enter' && handleSend()}
                     placeholder={t.inputPlaceholder}
                     className="flex-1 bg-white/5 border-2 border-white/20 p-4 font-sans focus:border-neon-green outline-none transition-colors"
                   />
@@ -521,6 +612,13 @@ export default function App() {
       {/* Background Decoration */}
       <View className="fixed inset-0 pointer-events-none z-[-1] opacity-5">
         <View className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px]" />
+      </View>
+
+      {/* Mobile Footer ICP */}
+      <View className="p-4 border-t border-white/10 text-center md:hidden bg-brutal-black">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noreferrer" className="text-[10px] font-mono opacity-30 hover:opacity-100 transition-opacity">
+          京ICP备2026014244号-1
+        </a>
       </View>
     </View>
   );

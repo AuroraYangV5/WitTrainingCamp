@@ -2,10 +2,23 @@ import { GoogleGenAI } from "@google/genai";
 import { EVALUATION_SCHEMA, GET_SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
-  public ai: GoogleGenAI;
+  private ai: GoogleGenAI;
 
   constructor() {
     this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  }
+
+  public setApiKey(apiKey: string) {
+    this.ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY || '' });
+  }
+
+  async generateContent(prompt: string, systemInstruction?: string) {
+    const response = await this.ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: { systemInstruction }
+    });
+    return response.text || "";
   }
 
   async generateChallenge(levelPrompt: string, lang: 'zh' | 'en') {
